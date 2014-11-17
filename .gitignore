@@ -1,0 +1,8 @@
+properties
+login-test
+ssl/
+.cabal-sandbox/
+cabal.sandbox.config
+dist/
+credentials.txt
+
