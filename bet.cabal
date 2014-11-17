@@ -30,6 +30,7 @@ library
                        Network.Betfair
                        Network.Betfair.Internal
                        Network.Betfair.Types
+                       Network.Betfair.Types.TH
                        Network.Betfair.Unsafe
   build-depends:       aeson                 >=0.8.0.2 && <1.0
                       ,base                  >=4.7     && <5.0
