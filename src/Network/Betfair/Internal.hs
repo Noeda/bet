@@ -1,3 +1,4 @@
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE AutoDeriveTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
@@ -10,7 +11,8 @@ module Network.Betfair.Internal
     , LoginResponse(..)
     , NumberOfRequests
     , rateLimit
-    , workRateLimit )
+    , workRateLimit
+    , Request(..) )
     where
 
 import Control.Applicative
@@ -70,4 +72,9 @@ workRateThread = forever $ do
       then forever $ threadDelay 10000000
       else when (x > 0) $
                threadDelay $ ceiling $ (1000000 :: Double) / x
+
+-- | Class of types that can be used as requests to Betfair, with their
+-- response defined as the second type variable.
+class (ToJSON a, FromJSON b) => Request a b | a -> b where
+    requestMethod :: Proxy a -> Text
 

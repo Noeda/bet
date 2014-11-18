@@ -34,7 +34,10 @@ module Network.Betfair
     -- * Connection
     , openBetfair
     , closeBetfair
-    , withOpenSSL
+    , Betfair()
+    -- * Operations
+    , request
+    , Network.Betfair.Types.Request()
     -- * Types
     , module Network.Betfair.Types )
     where
@@ -51,6 +54,7 @@ import qualified Data.ByteString.Builder as BL
 import qualified Data.ByteString.Lazy as BL
 import Data.IORef
 import Data.Monoid
+import Data.Proxy
 import Data.Text ( Text )
 import qualified Data.Text.Encoding as T
 import Data.Typeable
@@ -58,9 +62,11 @@ import Network.Betfair.Internal
 import Network.Betfair.Types
 import Network.HTTP.Client.OpenSSL
 import OpenSSL.Session
-import Pipes
-import Pipes.HTTP
+import Pipes hiding ( Proxy )
+import Pipes.HTTP as PH hiding ( Proxy )
 import System.Mem.Weak
+
+import Debug.Trace
 
 -- | Login credentials.
 data Credentials = Credentials {
@@ -82,7 +88,7 @@ data JsonRPCQuery = JsonRPCQuery
     deriving ( Eq, Show, Typeable )
 
 -- The type of all JSON-based queries received
-newtype JsonRPC a = JsonRPC a
+newtype JsonRPC a = JsonRPC (Either APIException a)
 
 data BetfairHandle = BetfairHandle
     { _betfairThread :: !ThreadId
@@ -90,7 +96,14 @@ data BetfairHandle = BetfairHandle
 makeClassy ''BetfairHandle
 
 instance FromJSON a => FromJSON (JsonRPC a) where
-    parseJSON (Object v) = JsonRPC <$> v .: "result"
+    parseJSON (Object v) = JsonRPC <$>
+        msum [ Right <$> v .: "result"
+             , do err <- v .: "error"
+                  dt <- err .: "data"
+                  exc <- dt .: "APINGException"
+                  details <- exc .: "errorDetails"
+                  code <- exc .: "errorCode"
+                  return $ Left $ APIException details code ]
     parseJSON _ = empty
 
 instance ToJSON JsonRPCQuery where
@@ -108,11 +121,6 @@ newtype Betfair = Betfair (MVar (Maybe BetfairHandle))
 --
 -- The connection is cut when the returned `Betfair` value is garbage collected
 -- or closed with `closeBetfair`.
---
--- Because Betfair connections are exclusively TLS -secured connections and
--- this library uses HsOpenSSL package, you need to have called `withOpenSSL`
--- from HsOpenSSL package somewhere in your program before you call this
--- (re-exported from "Network.Betfair" for convenience).
 openBetfair :: MonadIO m => Credentials -> m Betfair
 openBetfair credentials = liftIO $ mask_ $ do
     -- MVars. MVars everywhere.
@@ -120,13 +128,16 @@ openBetfair credentials = liftIO $ mask_ $ do
     work_mvar <- newEmptyMVar
     weak_mvar_mvar <- newEmptyMVar
 
-    bftid <- forkIOWithUnmask $ \unmask -> do
-        weak_mvar <- takeMVar weak_mvar_mvar
-        finally
-            (unmask $ betfairConnection credentials semaphore work_mvar)
-            (deRefWeak weak_mvar >>= \case
-                Nothing -> return ()
-                Just mvar -> modifyMVar_ mvar $ \_ -> return Nothing)
+    bftid <- forkIOWithUnmask $ \unmask ->
+        -- catch `CloseBetfair` to suppress message
+        flip catch (\CloseBetfair -> return ()) $ do
+            withOpenSSL $ do
+                weak_mvar <- takeMVar weak_mvar_mvar
+                finally
+                    (unmask $ betfairConnection credentials semaphore work_mvar)
+                    (deRefWeak weak_mvar >>= \case
+                        Nothing -> return ()
+                        Just mvar -> modifyMVar_ mvar $ \_ -> return Nothing)
 
     let handle = BetfairHandle { _betfairThread = bftid
                                , _workChannel = work_mvar }
@@ -153,8 +164,9 @@ work bf query = withBetfair bf $ \handle -> do
     takeMVar result >>= \case
         Left exc -> throwM exc
         Right result -> case decode result of
-            Nothing -> throwM $ ParsingFailure "while trying to do work"
-            Just (JsonRPC x) -> return x
+            Nothing -> traceShow result $ throwM $ ParsingFailure "while trying to do work"
+            Just (JsonRPC (Left exc)) -> throwM exc
+            Just (JsonRPC (Right x)) -> return x
 
 betfairConnection :: Credentials
                   -> MVar (Either SomeException ())
@@ -171,7 +183,17 @@ betfairConnection ~credentials@(Credentials{..}) semaphore work_mvar =
             session_key <- obtainSessionKey credentials m
             putMVar semaphore (Right ()) -- we are ready to process API calls
                                          -- so signal that to `openBetfair`.
-            workLoop session_key credentials m work_mvar
+            mask $ \restore -> do
+                keep_alive_tid <- forkIO $ restore $ forever $ do
+                                      -- wait 10 hours
+                                      -- we use a loop because Int may be too
+                                      -- small to hold the number of
+                                      -- microseconds needed.
+                                      replicateM_ (3600*10) $
+                                          threadDelay 1000000
+                                      keepAlive session_key credentials m
+                finally (restore $ workLoop session_key credentials m work_mvar)
+                        (killThread keep_alive_tid)
 
 workLoop :: SessionKey -> Credentials -> Manager -> MVar Work -> IO ()
 workLoop session_key credentials m work_mvar = forever $ do
@@ -189,7 +211,7 @@ workLoop session_key credentials m work_mvar = forever $ do
                     body <- readBodyLimited 50000000 response
                     putMVar result_mvar (Right body)
 
-betfairRequest :: SessionKey -> Credentials -> JsonRPCQuery -> IO Request
+betfairRequest :: SessionKey -> Credentials -> JsonRPCQuery -> IO PH.Request
 betfairRequest session_key (Credentials{..}) query = do
     req <- parseUrl $ "https://api.betfair.com/exchange/betting/json-rpc/v1"
     return $ req { method = "POST"
@@ -198,6 +220,21 @@ betfairRequest session_key (Credentials{..}) query = do
                     [ ("X-Application", T.encodeUtf8 _apiKey)
                     , ("X-Authentication", T.encodeUtf8 session_key)
                     , ("content-type", "application/json") ] }
+
+keepAlive :: SessionKey -> Credentials -> Manager -> IO ()
+keepAlive session_key (Credentials{..}) m = do
+    req' <- parseUrl "https://identitysso.betfair.com/api/keepAlive"
+    let req = req' { requestHeaders = requestHeaders req' <>
+                     [ ("Accept", "application/json")
+                     , ("X-Application", T.encodeUtf8 _apiKey)
+                     , ("X-Authentication", T.encodeUtf8 session_key) ] }
+    withHTTP req m $ \response -> do
+        -- maybe it works, maybe it does not? I'm not sure what would be the
+        -- sensible thing to do if keep-alive request fails. User probably
+        -- still can continue to use the API as long as the session key is
+        -- valid (which it will be for 12 hours).
+        _ <- readBodyLimited 100000 response
+        return ()
 
 obtainSessionKey :: Credentials
                  -> Manager
@@ -266,4 +303,11 @@ closeBetfair (Betfair mvar) = liftIO $ modifyMVar_ mvar $ \case
 
 closeBetfairHandle :: BetfairHandle -> IO ()
 closeBetfairHandle (_betfairThread -> tid) = throwTo tid CloseBetfair
+
+-- | Perform a request to `Betfair`.
+request :: forall a b m. (MonadIO m, Network.Betfair.Types.Request a b)
+        => a -> Betfair -> m b
+request req bf = liftIO $
+    work bf (JsonRPCQuery { methodName = requestMethod (Proxy :: Proxy a)
+                          , params = toJSON req })
 

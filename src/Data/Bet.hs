@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE AutoDeriveTypeable #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
@@ -42,6 +43,7 @@ module Data.Bet
 
 import Control.Applicative
 import Control.Lens
+import Data.Aeson
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Foldable
@@ -234,4 +236,13 @@ bestTradingStake2 bet opposing_odds =
     Bet (oppositeBetType $ bet^.betType)
         opposing_odds
         (bestTradingStake bet opposing_odds)
+
+instance FromJSON BetType where
+    parseJSON (String "BACK") = pure Back
+    parseJSON (String "LAY") = pure Lay
+    parseJSON _ = empty
+
+instance ToJSON BetType where
+    toJSON Back = String "BACK"
+    toJSON Lay = String "LAY"
 
