@@ -34,7 +34,8 @@ module Data.Bet
     , winningPotential
     -- ** Pattern synonyms
     , pattern BetType
-    , pattern BetWithLiability
+    , pattern BetLiability
+    , pattern BetWinningPotential
     -- * Choosing stakes
     , bestTradingStake
     , bestTradingStake2
@@ -216,8 +217,10 @@ setWinningPotential bet new_w =
 
 -- | Match the bet type only.
 pattern BetType b <- Bet b _ _
--- | Match with liability instead of stake.
-pattern BetWithLiability b o l <- Bet b o (getLiability -> l)
+-- | Match with liability.
+pattern BetLiability b o l <- Bet b o (getLiability -> l)
+-- | Match with winning potential.
+pattern BetWinningPotential b o w <- Bet b o (getWinningPotential -> w)
 
 -- | Given a bet and opposing bet odds, calculates the ideal stake size to
 -- minimize potential loss.
