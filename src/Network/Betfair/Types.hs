@@ -461,7 +461,7 @@ data Order = OrderC
     { _obetId :: BetId
     , _oorderType :: OrderType
     , _ostatus :: OrderStatus
-    , _opersistenceType :: PersistenceType
+    , _opersistenceType :: Maybe PersistenceType
     , _oside :: Side
     , _oprice :: Double
     , _osize :: Double

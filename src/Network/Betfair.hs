@@ -25,6 +25,9 @@
 -- by API use only (you can still ruin yourself by making bad bets), even the
 -- heavily weighted charges.
 --
+-- Use `request` to make calls to Betfair. Look at "Network.Betfair.Types" for
+-- commands to use with `request`.
+--
 
 module Network.Betfair
     (
