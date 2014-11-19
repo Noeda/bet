@@ -40,7 +40,7 @@ module Network.Betfair
     , Betfair()
     -- * Operations
     , request
-    , Network.Betfair.Types.Request()
+    , Network.Betfair.Internal.Request()
     -- * Types
     , module Network.Betfair.Types )
     where
@@ -308,7 +308,7 @@ closeBetfairHandle :: BetfairHandle -> IO ()
 closeBetfairHandle (_betfairThread -> tid) = throwTo tid CloseBetfair
 
 -- | Perform a request to `Betfair`.
-request :: forall a b m. (MonadIO m, Network.Betfair.Types.Request a b)
+request :: forall a b m. (MonadIO m, Network.Betfair.Internal.Request a b)
         => a -> Betfair -> m b
 request req bf = liftIO $
     work bf (JsonRPCQuery { methodName = requestMethod (Proxy :: Proxy a)

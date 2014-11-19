@@ -1,10 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE AutoDeriveTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 -- | This module defines most data types in the betting API of Betfair API,
 -- corresponding to version 2.0. Refer to Betfair API documentation for
@@ -12,15 +14,23 @@
 --
 -- <https://developer.betfair.com/default/api-s-and-services/sports-api/sports-overview/>
 --
+-- This module does not have a proper Haddock index so pay attention here.
+--
 -- Where possible, data types are in 1:1 correspondence to the ones documented
--- in the API. The exceptions are ID-like values and some types that can be
--- found in the "Data.Bet" module (that are isomorphic to the raw types).
--- However, because there are name clashes, all record names are prefixed with
--- the two-letter abbreviation of the data type they are defined in. All
+-- in the API. However, because there are name clashes, most record field names
+-- are prefixed with an abbreviation of the data type they are defined in. All
 -- recordful constructors have C at their end.
 --
--- Many of the records have lenses created with `makeClassy` from the lens
--- package.
+-- There are lenses for every record field, giving you overloaded fields. The
+-- lens name will have the prefix stripped off and the first character
+-- lowercased. For example, `cStatus` record field in `CurrentOrderSummary` has
+-- a corresponding lens called `status`, implemented in `HasStatus` type class.
+--
+-- Records that can be used as requests implement `Request` type class. Records
+-- that have some kind of sensible default implement `Default` type class.
+--
+-- `HasBet` is a helper typeclass for things that have a `Bet` inside them in
+-- some way.
 --
 -- A future version of this module might use overloaded records of some kind to
 -- avoid bazillion different names in record fields. Stay tuned.
@@ -33,118 +43,7 @@
 -- these values work.
 --
 
-module Network.Betfair.Types
-    (
-    -- * Data Types
-      ClearedOrderSummary(..)
-    , ClearedOrderSummaryReport(..)
-    , Competition(..)
-    , CompetitionResult(..)
-    , CountryCodeResult(..)
-    , CurrentOrderSummary(..)
-    , CurrentOrderSummaryReport(..)
-    , ExBestOffersOverrides(..)
-    , ExchangePrices(..)
-    , Event(..)
-    , EventResult(..)
-    , EventType(..)
-    , EventTypeResult(..)
-    , ItemDescription(..)
-    , ListCompetitions(..)
-    , ListCountries(..)
-    , ListCurrentOrders(..)
-    , ListClearedOrders(..)
-    , ListEvents(..)
-    , ListEventTypes(..)
-    , ListMarketBook(..)
-    , ListMarketCatalogue(..)
-    , MarketBook(..)
-    , MarketCatalogue(..)
-    , MarketDescription(..)
-    , MarketFilter(..)
-    , Match(..)
-    , Order(..)
-    , PriceProjection(..)
-    , PriceSize(..)
-    , Runner(..)
-    , RunnerCatalog(..)
-    , RunnerId(..)
-    , StartingPrices(..)
-    , TimeRange(..)
-    -- ** Requests
-    , Request()
-    -- ** Defaults
-    , Default(..)
-    -- ** Classy
-    , HasClearedOrderSummary(..)
-    , HasClearedOrderSummaryReport(..)
-    , HasCompetition(..)
-    , HasCompetitionResult(..)
-    , HasCountryCodeResult(..)
-    , HasCurrentOrderSummary(..)
-    , HasCurrentOrderSummaryReport(..)
-    , HasExBestOffersOverrides(..)
-    , HasExchangePrices(..)
-    , HasEvent(..)
-    , HasEventResult(..)
-    , HasEventType(..)
-    , HasEventTypeResult(..)
-    , HasItemDescription(..)
-    , HasListCompetitions(..)
-    , HasListCountries(..)
-    , HasListCurrentOrders(..)
-    , HasListClearedOrders(..)
-    , HasListEvents(..)
-    , HasListEventTypes(..)
-    , HasListMarketBook(..)
-    , HasListMarketCatalogue(..)
-    , HasMarketBook(..)
-    , HasMarketCatalogue(..)
-    , HasMarketDescription(..)
-    , HasMarketFilter(..)
-    , HasMatch(..)
-    , HasOrder(..)
-    , HasPriceProjection(..)
-    , HasPriceSize(..)
-    , HasRunner(..)
-    , HasRunnerCatalog(..)
-    , HasRunnerId(..)
-    , HasStartingPrices(..)
-    , HasTimeRange(..)
-    -- * IDs
-    , BetId(..)
-    , Country(..)
-    , CompetitionId(..)
-    , EventId(..)
-    , EventTypeId(..)
-    , MarketId(..)
-    , MarketTypeCode(..)
-    , MatchId(..)
-    , SelectionId(..)
-    , Venue(..)
-    -- * Enums
-    , BetStatus(..)
-    , GroupBy(..)
-    , MarketBettingType(..)
-    , MarketProjection(..)
-    , MarketSort(..)
-    , MarketStatus(..)
-    , MatchProjection(..)
-    , OrderBy(..)
-    , OrderProjection(..)
-    , OrderStatus(..)
-    , OrderType(..)
-    , PersistenceType(..)
-    , PriceData(..)
-    , RollupModel(..)
-    , RunnerStatus(..)
-    , Side
-    , SortDir(..)
-    -- * Exceptions
-    , APIException(..)
-    , APIExceptionCode(..)
-    , pattern APIExcCode )
-    where
+module Network.Betfair.Types where
 
 import Control.Monad.Catch
 import Control.Lens
@@ -160,381 +59,38 @@ import Network.Betfair.Internal
 import Network.Betfair.Types.TH
 import Prelude hiding ( filter, id )
 
-newtype BetId = BetId { getBetId :: Text }
-                deriving ( Eq, Ord, Show, Read, Typeable, FromJSON, ToJSON )
-
-newtype Country = Country { getCountry :: Text }
-                  deriving ( Eq, Ord, Show, Read, Typeable
-                           , FromJSON, ToJSON )
-
-newtype CompetitionId = CompetitionId { getCompetitionId :: Text }
-                        deriving ( Eq, Ord, Show, Read, Typeable
-                                 , FromJSON, ToJSON )
-
-newtype EventId = EventId { getEventId :: Text }
-                  deriving ( Eq, Ord, Show, Read, Typeable
-                           , FromJSON, ToJSON )
-
-newtype EventTypeId = EventTypeId { getEventTypeId :: Text }
-                      deriving ( Eq, Ord, Show, Read, Typeable
-                               , FromJSON, ToJSON )
-
-newtype MarketId = MarketId { getMarketId :: Text }
-                   deriving ( Eq, Ord, Show, Read, Typeable
-                            , FromJSON, ToJSON )
-
-newtype MarketTypeCode = MarketTypeCode { getMarketTypeCode :: Text }
-                         deriving ( Eq, Ord, Show, Read, Typeable
-                                  , FromJSON, ToJSON )
-
-newtype MatchId = MatchId { getMatchId :: Text }
-                  deriving ( Eq, Ord, Show, Read, Typeable, FromJSON, ToJSON )
-
-newtype SelectionId = SelectionId { getSelectionId :: Int }
-                      deriving ( Eq, Ord, Show, Read, Typeable
-                               , FromJSON, ToJSON )
-
-newtype Venue = Venue { getVenue :: Text }
-                deriving ( Eq, Ord, Show, Read, Typeable
-                         , FromJSON, ToJSON )
-
-data ClearedOrderSummary = ClearedOrderSummaryC
-    { _coeventTypeId :: EventTypeId
-    , _coeventId :: EventId
-    , _comarketId :: MarketId
-    , _coselectionId :: SelectionId
-    , _cohandicap :: Double
-    , _cobetId :: BetId
-    , _coplacedDate :: UTCTime
-    , _copersistenceType :: Maybe PersistenceType
-    , _coorderType :: Maybe OrderType
-    , _coside :: Maybe Side
-    , _coitemDescription :: Maybe ItemDescription
-    , _copriceRequested :: Maybe Double
-    , _cosettledDate :: Maybe UTCTime
-    , _cobetCount :: Int
-    , _cocommission :: Maybe Double
-    , _copriceMatched :: Maybe Double
-    , _copriceReduced :: Maybe Bool
-    , _cosizeSettled :: Maybe Double
-    , _coprofit :: Double
-    , _cosizeCancelled :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data Competition = CompetitionC
-    { _cid :: CompetitionId
-    , _cname :: Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data CompetitionResult = CompetitionResultC
-    { _ccompetition :: Competition
-    , _cmarketCount :: Int
-    , _ccompetitionRegion :: Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data CountryCodeResult = CountryCodeResultC
-    { _cccountryCode :: Text
-    , _ccmarketCount :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ClearedOrderSummaryReport = ClearedOrderSummaryReportC
-    { _coclearedOrders :: [ClearedOrderSummary]
-    , _comoreAvailable :: Bool }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data CurrentOrderSummary = CurrentOrderSummaryC
-    { _cbetId :: BetId
-    , _cmarketId :: MarketId
-    , _cselectionId :: SelectionId
-    , _chandicap :: Double
-    , _cpriceSize :: PriceSize
-    , _cbspLiability :: Double
-    , _cside :: Side
-    , _cstatus :: OrderStatus
-    , _cpersistenceType :: PersistenceType
-    , _corderType :: OrderType
-    , _cplacedDate :: UTCTime
-    , _cmatchedDate :: Maybe UTCTime
-    , _caveragePriceMatched :: Maybe Double
-    , _csizeMatched :: Maybe Double
-    , _csizeRemaining :: Maybe Double
-    , _csizeLapsed :: Maybe Double
-    , _csizeCancelled :: Maybe Double
-    , _csizeVoided :: Maybe Double
-    , _cregulatorAuthCode :: Maybe Text
-    , _cregulatorCode :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data CurrentOrderSummaryReport = CurrentOrderSummaryReportC
-    { _ccurrentOrders :: [CurrentOrderSummary]
-    , _cmoreAvailable :: Bool }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ExBestOffersOverrides = ExBestOffersOverridesC
-    { _ebbestPricesDepth :: Maybe Int
-    , _ebrollupModel :: Maybe RollupModel
-    , _ebrollupLimit :: Maybe Int
-    , _ebrollupLiabilityThreshold :: Maybe Double
-    , _ebrollupLiabilityFactor :: Maybe Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ExchangePrices = ExchangePricesC
-    { _epavailableToBack :: Maybe [PriceSize]
-    , _epavailableToLay :: Maybe [PriceSize]
-    , _eptradedVolume :: Maybe [PriceSize] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data Event = EventC
-    { _eid :: EventId
-    , _ename :: Text
-    , _ecountryCode :: Maybe Country
-    , _etimezone :: Text
-    , _evenue :: Maybe Text
-    , _eopenDate :: UTCTime }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data EventResult = EventResultC
-    { _erevent :: Event
-    , _ermarketCount :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data EventType = EventTypeC
-    { _etid :: EventTypeId
-    , _etname :: Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data EventTypeResult = EventTypeResultC
-    { _etreventType :: EventType
-    , _etrmarketCount :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ItemDescription = ItemDescriptionC
-    { _ieventTypeDesc :: Maybe Text
-    , _ieventDesc :: Maybe Text
-    , _imarketDesc :: Maybe Text
-    , _imarketStartTime :: Maybe UTCTime
-    , _irunnerDesc :: Maybe Text
-    , _inumberOfWinners :: Maybe Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ListCompetitions = ListCompetitionsC
-    { _lcfilter :: MarketFilter
-    , _lclocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ListCountries = ListCountriesC
-    { _lcsfilter :: MarketFilter
-    , _lcslocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ListCurrentOrders = ListCurrentOrdersC
-    { _lcobetIds :: Maybe (S.Set BetId)
-    , _lcomarketIds :: Maybe (S.Set MarketId)
-    , _lcoorderProjection :: Maybe OrderProjection
-    , _lcodateRange :: Maybe TimeRange
-    , _lcoorderBy :: Maybe OrderBy
-    , _lcosortDir :: Maybe SortDir
-    , _lcofromRecord :: Maybe Int
-    , _lcorecordCount :: Maybe Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ListClearedOrders = ListClearedOrdersC
-    { _lcrbetStatus :: BetStatus
-    , _lcreventTypeIds :: Maybe (S.Set EventTypeId)
-    , _lcreventIds :: Maybe (S.Set EventId)
-    , _lcrmarketIds :: Maybe (S.Set MarketId)
-    , _lcrrunnerIds :: Maybe (S.Set RunnerId)
-    , _lcrbetIds :: Maybe (S.Set BetId)
-    , _lcrside :: Maybe Side
-    , _lcrsettledDateRange :: Maybe TimeRange
-    , _lcrgroupBy :: Maybe GroupBy
-    , _lcrincludeItemDescription :: Maybe Bool
-    , _lcrlocale :: Maybe Text
-    , _lcrfromRecord :: Maybe Int
-    , _lcrrecordCount :: Maybe Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ListEvents = ListEventsC
-    { _lefilter :: MarketFilter
-    , _lelocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ListEventTypes = ListEventTypesC
-    { _letfilter :: MarketFilter
-    , _letlocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ListMarketBook = ListMarketBookC
-    { _lmbmarketIds :: [MarketId]
-    , _lmbpriceProjection :: Maybe PriceProjection
-    , _lmborderProjection :: Maybe OrderProjection
-    , _lmbmatchProjection :: Maybe MatchProjection
-    , _lmbcurrencyCode :: Maybe Text
-    , _lmblocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data ListMarketCatalogue = ListMarketCatalogueC
-    { _lmcfilter :: MarketFilter
-    , _lmcmarketProjection :: Maybe (S.Set MarketProjection)
-    , _lmcsort :: Maybe (S.Set MarketSort)
-    , _lmcmaxResults :: Int
-    , _lmclocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data MarketBook = MarketBookC
-    { _mbmarketId :: MarketId
-    , _mbisMarketDataDelayed :: Bool
-    , _mbstatus :: Maybe MarketStatus
-    , _mbbetDelay :: Maybe Int
-    , _mbbspReconciled :: Maybe Bool
-    , _mbcomplete :: Maybe Bool
-    , _mbinplay :: Maybe Bool
-    , _mbnumberOfWinners :: Maybe Int
-    , _mbnumberOfRunners :: Maybe Int
-    , _mbnumberOfActiveRunners :: Maybe Int
-    , _mblastMatchTime :: Maybe UTCTime
-    , _mbtotalMatched :: Maybe Double
-    , _mbtotalAvailable :: Maybe Double
-    , _mbcrossMatching :: Maybe Bool
-    , _mbrunnersVoidable :: Maybe Bool
-    , _mbversion :: Maybe Int
-    , _mbrunners :: [Runner] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data MarketCatalogue = MarketCatalogueC
-    { _mcmarketId :: MarketId
-    , _mcmarketName :: Text
-    , _mcmarketStartTime :: Maybe UTCTime
-    , _mcdescription :: Maybe MarketDescription
-    , _mctotalMatched :: Maybe Double
-    , _mcrunners :: Maybe [RunnerCatalog]
-    , _mceventType :: Maybe EventType
-    , _mccompetition :: Maybe Competition
-    , _mcevent :: Maybe Event }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data MarketDescription = MarketDescriptionC
-    { _mdpersistenceEnabled :: Bool
-    , _mdbspMarket :: Bool
-    , _mdmarketTime :: UTCTime
-    , _mdsuspendTime :: UTCTime
-    , _mdsettleTime :: Maybe UTCTime
-    , _mdbettingType :: MarketBettingType
-    , _mdturnInPlayEnabled :: Bool
-    , _mdmarketType :: Text
-    , _mdregulator :: Text
-    , _mdmarketBaseRate :: Double
-    , _mddiscountAllowed :: Bool
-    , _mdwallet :: Maybe Text
-    , _mdrules :: Maybe Text
-    , _mdrulesHasDate :: Maybe Bool
-    , _mdclarifications :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data MarketFilter = MarketFilterC
-    { _mftextQuery :: Maybe String
-    , _mfeventTypeIds :: Maybe (S.Set EventTypeId)
-    , _mfeventIds :: Maybe (S.Set EventId)
-    , _mfcompetitionIds :: Maybe (S.Set CompetitionId)
-    , _mfmarketIds :: Maybe (S.Set MarketId)
-    , _mfvenues :: Maybe (S.Set Venue)
-    , _mfbspOnly :: Maybe Bool
-    , _mfturnInPlayEnabled :: Maybe Bool
-    , _mfinPlayOnly :: Maybe Bool
-    , _mfmarketBettingTypes :: Maybe (S.Set MarketBettingType)
-    , _mfmarketCountries :: Maybe (S.Set Country)
-    , _mfmarketTypeCodes :: Maybe (S.Set MarketTypeCode)
-    , _mfmarketStartTime :: Maybe (UTCTime, UTCTime)
-    , _mfwithOrders :: Maybe (S.Set OrderStatus) }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data Match = MatchC
-    { _mbetId :: Maybe BetId
-    , _mmatchId :: Maybe MatchId
-    , _mside :: Side
-    , _mprice :: Double
-    , _msize :: Double
-    , _mmatchDate :: Maybe UTCTime }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data Order = OrderC
-    { _obetId :: BetId
-    , _oorderType :: OrderType
-    , _ostatus :: OrderStatus
-    , _opersistenceType :: Maybe PersistenceType
-    , _oside :: Side
-    , _oprice :: Double
-    , _osize :: Double
-    , _obspLiability :: Double
-    , _oplacedDate :: UTCTime
-    , _oavgPriceMatched :: Maybe Double
-    , _osizeMatched :: Maybe Double
-    , _osizeRemaining :: Maybe Double
-    , _osizeLapsed :: Maybe Double
-    , _osizeCancelled :: Maybe Double
-    , _osizeVoided :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data PriceProjection = PriceProjectionC
-    { _pppriceData :: Maybe (S.Set PriceData)
-    , _ppexBestOffersOverrides :: Maybe ExBestOffersOverrides
-    , _ppvirtualize :: Maybe Bool
-    , _pprolloverStakes :: Maybe Bool }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data PriceSize = PriceSizeC
-    { _psprice :: !Double
-    , _pssize :: !Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data Runner = RunnerC
-    { _rselectionId :: SelectionId
-    , _rhandicap :: Double
-    , _rstatus :: RunnerStatus
-    , _radjustmentFactor :: Maybe Double -- the official documentation says
-                                         -- this is required but it's lying.
-                                         -- lying! so we use Maybe
-    , _rlastPriceTraded :: Maybe Double
-    , _rtotalMatched :: Maybe Double
-    , _rremovalData :: Maybe UTCTime
-    , _rsp :: Maybe StartingPrices
-    , _rex :: Maybe ExchangePrices
-    , _rorders :: Maybe [Order]
-    , _rmatches :: Maybe [Match] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data RunnerCatalog = RunnerCatalogC
-    { _rcselectionId :: SelectionId
-    , _rcrunnerName :: Text
-    , _rchandicap :: Double
-    , _rcsortPriority :: Int
-    , _rcmetadata :: M.Map Text Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data RunnerId = RunnerIdC
-    { _rimarketId :: MarketId
-    , _riselectionId :: SelectionId
-    , _rihandicap :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data StartingPrices = StartingPricesC
-    { _spnearPrice :: Maybe Double
-    , _spfarPrice :: Maybe Double
-    , _spbackStakeTaken :: Maybe [PriceSize]
-    , _splayLiabilityTaken :: Maybe [PriceSize]
-    , _spactualSP :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
-data TimeRange = TimeRangeC
-    { _tfrom :: UTCTime
-    , _tto :: UTCTime }
-    deriving ( Eq, Ord, Show, Read, Typeable )
-
 data BetStatus
     = Settled
     | Voided
     | Lapsed
     | Cancelled
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+
+data ExecutionReportErrorCode
+    = RErrorInMatcher
+    | RProcessedWithErrors
+    | RBetActionError
+    | RInvalidAccountState
+    | RInvalidWalletStatus
+    | RInsufficientFunds
+    | RLossLimitExceeded
+    | RMarketSuspended
+    | RMarketNotOpenForBetting
+    | RDuplicateTransaction
+    | RInvalidOrder
+    | RInvalidMarketId
+    | RPermissionDenied
+    | RDuplicateBetids
+    | RNoActionRequired
+    | RServiceUnavailable
+    | RRejectedByRegulator
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+
+data ExecutionReportStatus
+    = ESuccess
+    | EFailure
+    | EProcessedWithErrors
+    | ETimeout
     deriving ( Eq, Ord, Show, Read, Typeable, Enum )
 
 data GroupBy
@@ -543,6 +99,35 @@ data GroupBy
     | GBMarket
     | GBSide
     | GBBet
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+
+data InstructionReportErrorCode
+    = InvalidBetSize
+    | InvalidRunner
+    | BetTakenOrLapsed
+    | BetInProgress
+    | RunnerRemoved
+    | MarketNotOpenForBetting
+    | LossLimitExceeded
+    | MarketNotOpenForBspBetting
+    | InvalidPriceEdit
+    | InvalidOdds
+    | InsufficientFunds
+    | InvalidPersistenceType
+    | ErrorInMatcher
+    | InvalidBackLayCombination
+    | ErrorInOrder
+    | InvalidBidType
+    | InvalidBetId
+    | CancelledNotPlaced
+    | RelatedActionFailed
+    | NoActionRequired
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+
+data InstructionReportStatus
+    = Success
+    | Failure
+    | Timeout
     deriving ( Eq, Ord, Show, Read, Typeable, Enum )
 
 data MarketBettingType
@@ -649,6 +234,559 @@ data SortDir
     | LatestToEarliest
     deriving ( Eq, Ord, Show, Read, Typeable, Enum )
 
+data TimeGranularity
+    = Days
+    | Hours
+    | Minutes
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+
+
+newtype BetId = BetId { getBetId :: Text }
+                deriving ( Eq, Ord, Show, Read, Typeable, FromJSON, ToJSON )
+
+newtype Country = Country { getCountry :: Text }
+                  deriving ( Eq, Ord, Show, Read, Typeable
+                           , FromJSON, ToJSON )
+
+newtype CompetitionId = CompetitionId { getCompetitionId :: Text }
+                        deriving ( Eq, Ord, Show, Read, Typeable
+                                 , FromJSON, ToJSON )
+
+newtype EventId = EventId { getEventId :: Text }
+                  deriving ( Eq, Ord, Show, Read, Typeable
+                           , FromJSON, ToJSON )
+
+newtype EventTypeId = EventTypeId { getEventTypeId :: Text }
+                      deriving ( Eq, Ord, Show, Read, Typeable
+                               , FromJSON, ToJSON )
+
+newtype MarketId = MarketId { getMarketId :: Text }
+                   deriving ( Eq, Ord, Show, Read, Typeable
+                            , FromJSON, ToJSON )
+
+newtype MarketTypeCode = MarketTypeCode { getMarketTypeCode :: Text }
+                         deriving ( Eq, Ord, Show, Read, Typeable
+                                  , FromJSON, ToJSON )
+
+newtype MatchId = MatchId { getMatchId :: Text }
+                  deriving ( Eq, Ord, Show, Read, Typeable, FromJSON, ToJSON )
+
+newtype SelectionId = SelectionId { getSelectionId :: Int }
+                      deriving ( Eq, Ord, Show, Read, Typeable
+                               , FromJSON, ToJSON )
+
+newtype Venue = Venue { getVenue :: Text }
+                deriving ( Eq, Ord, Show, Read, Typeable
+                         , FromJSON, ToJSON )
+
+data CancelExecutionReport = CancelExecutionReportC
+    { ceCustomerRef :: Maybe Text
+    , ceStatus :: ExecutionReportStatus
+    , ceErrorCode :: Maybe ExecutionReportErrorCode
+    , ceMarketId :: Maybe MarketId
+    , ceInstructionReports :: [CancelInstructionReport] }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data CancelInstruction = CancelInstructionC
+    { ciBetId :: BetId
+    , ciSizeReduction :: Maybe Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data CancelInstructionReport = CancelInstructionReportC
+    { ciStatus :: InstructionReportStatus
+    , ciInstructionReportErrorCode :: Maybe InstructionReportErrorCode
+    , ciInstruction :: Maybe CancelInstruction
+    , ciSizeCancelled :: Double
+    , ciCancelledDate :: Maybe UTCTime }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data CancelOrders = CancelOrdersC
+    { caMarketId :: Maybe MarketId
+    , caInstructions :: Maybe [CancelInstruction]
+    , caCustomerRef :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ClearedOrderSummary = ClearedOrderSummaryC
+    { coEventTypeId :: EventTypeId
+    , coEventId :: EventId
+    , coMarketId :: MarketId
+    , coSelectionId :: SelectionId
+    , coHandicap :: Double
+    , coBetId :: BetId
+    , coPlacedDate :: UTCTime
+    , coPersistenceType :: Maybe PersistenceType
+    , coOrderType :: Maybe OrderType
+    , coSide :: Maybe Side
+    , coItemDescription :: Maybe ItemDescription
+    , coPriceRequested :: Maybe Double
+    , coSettledDate :: Maybe UTCTime
+    , coBetCount :: Int
+    , coCommission :: Maybe Double
+    , coPriceMatched :: Maybe Double
+    , coPriceReduced :: Maybe Bool
+    , coSizeSettled :: Maybe Double
+    , coProfit :: Double
+    , coSizeCancelled :: Maybe Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data Competition = CompetitionC
+    { cId :: CompetitionId
+    , cName :: Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data CompetitionResult = CompetitionResultC
+    { cCompetition :: Competition
+    , cMarketCount :: Int
+    , cCompetitionRegion :: Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data CountryCodeResult = CountryCodeResultC
+    { ccCountryCode :: Text
+    , ccMarketCount :: Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ClearedOrderSummaryReport = ClearedOrderSummaryReportC
+    { coClearedOrders :: [ClearedOrderSummary]
+    , coMoreAvailable :: Bool }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data CurrentOrderSummary = CurrentOrderSummaryC
+    { cBetId :: BetId
+    , cMarketId :: MarketId
+    , cSelectionId :: SelectionId
+    , cHandicap :: Double
+    , cPriceSize :: PriceSize
+    , cBspLiability :: Double
+    , cSide :: Side
+    , cStatus :: OrderStatus
+    , cPersistenceType :: PersistenceType
+    , cOrderType :: OrderType
+    , cPlacedDate :: UTCTime
+    , cMatchedDate :: Maybe UTCTime
+    , cAveragePriceMatched :: Maybe Double
+    , cSizeMatched :: Maybe Double
+    , cSizeRemaining :: Maybe Double
+    , cSizeLapsed :: Maybe Double
+    , cSizeCancelled :: Maybe Double
+    , cSizeVoided :: Maybe Double
+    , cRegulatorAuthCode :: Maybe Text
+    , cRegulatorCode :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data CurrentOrderSummaryReport = CurrentOrderSummaryReportC
+    { cCurrentOrders :: [CurrentOrderSummary]
+    , cMoreAvailable :: Bool }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ExBestOffersOverrides = ExBestOffersOverridesC
+    { ebbestPricesDepth :: Maybe Int
+    , ebRollupModel :: Maybe RollupModel
+    , ebRollupLimit :: Maybe Int
+    , ebRollupLiabilityThreshold :: Maybe Double
+    , ebRollupLiabilityFactor :: Maybe Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ExchangePrices = ExchangePricesC
+    { epAvailableToBack :: Maybe [PriceSize]
+    , epAvailableToLay :: Maybe [PriceSize]
+    , epTradedVolume :: Maybe [PriceSize] }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data Event = EventC
+    { eId :: EventId
+    , eName :: Text
+    , eCountryCode :: Maybe Country
+    , eTimezone :: Text
+    , eVenue :: Maybe Text
+    , eOpenDate :: UTCTime }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data EventResult = EventResultC
+    { erEvent :: Event
+    , erMarketCount :: Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data EventType = EventTypeC
+    { etId :: EventTypeId
+    , etName :: Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data EventTypeResult = EventTypeResultC
+    { etrEventType :: EventType
+    , etrMarketCount :: Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ItemDescription = ItemDescriptionC
+    { iEventTypeDesc :: Maybe Text
+    , iEventDesc :: Maybe Text
+    , iMarketDesc :: Maybe Text
+    , iMarketStartTime :: Maybe UTCTime
+    , iRunnerDesc :: Maybe Text
+    , iNumberOfWinners :: Maybe Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data LimitOnCloseOrder = LimitOnCloseOrderC
+    { loLiability :: Double
+    , loPrice :: Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data LimitOrder = LimitOrderC
+    { lSize :: Double
+    , lPrice :: Double
+    , lPersistenceType :: PersistenceType }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListCompetitions = ListCompetitionsC
+    { lcFilter :: MarketFilter
+    , lcLocale :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListCountries = ListCountriesC
+    { lcsFilter :: MarketFilter
+    , lcsLocale :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListCurrentOrders = ListCurrentOrdersC
+    { lcoBetIds :: Maybe (S.Set BetId)
+    , lcoMarketIds :: Maybe (S.Set MarketId)
+    , lcoOrderProjection :: Maybe OrderProjection
+    , lcoDateRange :: Maybe TimeRange
+    , lcoOrderBy :: Maybe OrderBy
+    , lcoSortDir :: Maybe SortDir
+    , lcoFromRecord :: Maybe Int
+    , lcoRecordCount :: Maybe Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListClearedOrders = ListClearedOrdersC
+    { lcrBetStatus :: BetStatus
+    , lcrEventTypeIds :: Maybe (S.Set EventTypeId)
+    , lcrEventIds :: Maybe (S.Set EventId)
+    , lcrMarketIds :: Maybe (S.Set MarketId)
+    , lcrRunnerIds :: Maybe (S.Set RunnerId)
+    , lcrBetIds :: Maybe (S.Set BetId)
+    , lcrSide :: Maybe Side
+    , lcrSettledDateRange :: Maybe TimeRange
+    , lcrGroupBy :: Maybe GroupBy
+    , lcrIncludeItemDescription :: Maybe Bool
+    , lcrLocale :: Maybe Text
+    , lcrFromRecord :: Maybe Int
+    , lcrRecordCount :: Maybe Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListEvents = ListEventsC
+    { leFilter :: MarketFilter
+    , leLocale :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListEventTypes = ListEventTypesC
+    { letFilter :: MarketFilter
+    , letLocale :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListMarketBook = ListMarketBookC
+    { lmbMarketIds :: [MarketId]
+    , lmbPriceProjection :: Maybe PriceProjection
+    , lmbOrderProjection :: Maybe OrderProjection
+    , lmbMatchProjection :: Maybe MatchProjection
+    , lmbCurrencyCode :: Maybe Text
+    , lmbLocale :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListMarketCatalogue = ListMarketCatalogueC
+    { lmcFilter :: MarketFilter
+    , lmcMarketProjection :: Maybe (S.Set MarketProjection)
+    , lmcSort :: Maybe (S.Set MarketSort)
+    , lmcMaxResults :: Int
+    , lmcLocale :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListMarketProfitAndLoss = ListMarketProfitAndLossC
+    { lmMarketIds :: S.Set MarketId
+    , lmIncludeSettledBets :: Maybe Bool
+    , lmIncludeBspBets :: Maybe Bool
+    , lmNetOfCommission :: Maybe Bool }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListMarketTypes = ListMarketTypesC
+    { lmtFilter :: MarketFilter
+    , lmtLocale :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListTimeRanges = ListTimeRangesC
+    { ltFilter :: MarketFilter
+    , ltGranularity :: TimeGranularity }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ListVenues = ListVenuesC
+    { lvFilter :: MarketFilter
+    , lvLocale :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data MarketBook = MarketBookC
+    { mbMarketId :: MarketId
+    , mbIsMarketDataDelayed :: Bool
+    , mbStatus :: Maybe MarketStatus
+    , mbBetDelay :: Maybe Int
+    , mbBspReconciled :: Maybe Bool
+    , mbComplete :: Maybe Bool
+    , mbInplay :: Maybe Bool
+    , mbNumberOfWinners :: Maybe Int
+    , mbNumberOfRunners :: Maybe Int
+    , mbNumberOfActiveRunners :: Maybe Int
+    , mbLastMatchTime :: Maybe UTCTime
+    , mbTotalMatched :: Maybe Double
+    , mbTotalAvailable :: Maybe Double
+    , mbCrossMatching :: Maybe Bool
+    , mbRunnersVoidable :: Maybe Bool
+    , mbVersion :: Maybe Int
+    , mbRunners :: [Runner] }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data MarketCatalogue = MarketCatalogueC
+    { mcMarketId :: MarketId
+    , mcMarketName :: Text
+    , mcMarketStartTime :: Maybe UTCTime
+    , mcDescription :: Maybe MarketDescription
+    , mcTotalMatched :: Maybe Double
+    , mcRunners :: Maybe [RunnerCatalog]
+    , mcEventType :: Maybe EventType
+    , mcCompetition :: Maybe Competition
+    , mcEvent :: Maybe Event }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data MarketDescription = MarketDescriptionC
+    { mdPersistenceEnabled :: Bool
+    , mdBspMarket :: Bool
+    , mdMarketTime :: UTCTime
+    , mdSuspendTime :: UTCTime
+    , mdSettleTime :: Maybe UTCTime
+    , mdBettingType :: MarketBettingType
+    , mdTurnInPlayEnabled :: Bool
+    , mdMarketType :: Text
+    , mdRegulator :: Text
+    , mdMarketBaseRate :: Double
+    , mdDiscountAllowed :: Bool
+    , mdWallet :: Maybe Text
+    , mdRules :: Maybe Text
+    , mdRulesHasDate :: Maybe Bool
+    , mdClarifications :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data MarketFilter = MarketFilterC
+    { mfTextQuery :: Maybe String
+    , mfEventTypeIds :: Maybe (S.Set EventTypeId)
+    , mfEventIds :: Maybe (S.Set EventId)
+    , mfCompetitionIds :: Maybe (S.Set CompetitionId)
+    , mfMarketIds :: Maybe (S.Set MarketId)
+    , mfVenues :: Maybe (S.Set Venue)
+    , mfBspOnly :: Maybe Bool
+    , mfTurnInPlayEnabled :: Maybe Bool
+    , mfInPlayOnly :: Maybe Bool
+    , mfMarketBettingTypes :: Maybe (S.Set MarketBettingType)
+    , mfMarketCountries :: Maybe (S.Set Country)
+    , mfMarketTypeCodes :: Maybe (S.Set MarketTypeCode)
+    , mfMarketStartTime :: Maybe (UTCTime, UTCTime)
+    , mfWithOrders :: Maybe (S.Set OrderStatus) }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+newtype MarketOnCloseOrder = MarketOnCloseOrderC
+        { mLiability :: Double }
+        deriving ( Eq, Ord, Show, Read, Typeable )
+
+data MarketProfitAndLoss = MarketProfitAndLossC
+    { mpMarketId :: Maybe MarketId
+    , mpCommissionApplied :: Maybe Double
+    , mpProfitAndLosses :: Maybe [RunnerProfitAndLoss] }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data MarketTypeResult = MarketTypeResultC
+    { mtMarketType :: Text
+    , mtMarketCount :: Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data Match = MatchC
+    { mBetId :: Maybe BetId
+    , mMatchId :: Maybe MatchId
+    , mSide :: Side
+    , mPrice :: Double
+    , mSize :: Double
+    , mMatchDate :: Maybe UTCTime }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data Order = OrderC
+    { oBetId :: BetId
+    , oOrderType :: OrderType
+    , oStatus :: OrderStatus
+    , oPersistenceType :: Maybe PersistenceType
+    , oSide :: Side
+    , oPrice :: Double
+    , oSize :: Double
+    , oBspLiability :: Double
+    , oPlacedDate :: UTCTime
+    , oAvgPriceMatched :: Maybe Double
+    , oSizeMatched :: Maybe Double
+    , oSizeRemaining :: Maybe Double
+    , oSizeLapsed :: Maybe Double
+    , oSizeCancelled :: Maybe Double
+    , oSizeVoided :: Maybe Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data PlaceExecutionReport = PlaceExecutionReportC
+    { peCustomerRef :: Maybe Text
+    , peStatus :: ExecutionReportStatus
+    , peErrorCode :: Maybe ExecutionReportErrorCode
+    , peMarketId :: Maybe MarketId
+    , peInstructionReports :: Maybe [PlaceInstructionReport] }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data PlaceInstruction = PlaceInstructionC
+    { pOrderType :: OrderType
+    , pSelectionId :: SelectionId
+    , pHandicap :: Maybe Double
+    , pSide :: Side
+    , pLimitOrder :: Maybe LimitOrder
+    , pLimitOnCloseOrder :: Maybe LimitOnCloseOrder
+    , pMarketOnCloseOrder :: Maybe MarketOnCloseOrder }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data PlaceInstructionReport = PlaceInstructionReportC
+    { piStatus :: InstructionReportStatus
+    , piErrorCode :: Maybe InstructionReportErrorCode
+    , piInstruction :: PlaceInstruction
+    , piBetId :: Maybe Text
+    , piPlacedDate :: Maybe UTCTime
+    , piAveragePriceMatched :: Maybe Double
+    , piSizeMatched :: Maybe Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data PlaceOrders = PlaceOrdersC
+    { pMarketId :: MarketId
+    , pInstructions :: [PlaceInstruction]
+    , pCustomerRef :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data PriceProjection = PriceProjectionC
+    { ppPriceData :: Maybe (S.Set PriceData)
+    , ppExBestOffersOverrides :: Maybe ExBestOffersOverrides
+    , ppVirtualize :: Maybe Bool
+    , ppRolloverStakes :: Maybe Bool }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data PriceSize = PriceSizeC
+    { psPrice :: Double
+    , psSize :: Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ReplaceExecutionReport = ReplaceExecutionReportC
+    { reCustomerRef :: Maybe Text
+    , reStatus :: ExecutionReportStatus
+    , reErrorCode :: Maybe ExecutionReportErrorCode
+    , reMarketId :: Maybe Text
+    , reInstructionReports :: Maybe [ReplaceInstructionReport] }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ReplaceInstruction = ReplaceInstructionC
+    { rBetId :: BetId
+    , rNewPrice :: Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ReplaceInstructionReport = ReplaceInstructionReportC
+    { riStatus :: InstructionReportStatus
+    , riErrorCode :: Maybe InstructionReportErrorCode
+    , riCancelInstructionReport :: Maybe CancelInstructionReport
+    , riPlaceInstructionReport :: Maybe PlaceInstructionReport }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data ReplaceOrders = ReplaceOrdersC
+    { rMarketId :: MarketId
+    , rInstructions :: [ReplaceInstruction]
+    , rCustomerRef :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data Runner = RunnerC
+    { rSelectionId :: SelectionId
+    , rHandicap :: Double
+    , rStatus :: RunnerStatus
+    , rAdjustmentFactor :: Maybe Double -- the official documentation says
+                                        -- this is required but it's lying.
+                                        -- lying! so we use Maybe
+    , rLastPriceTraded :: Maybe Double
+    , rTotalMatched :: Maybe Double
+    , rRemovalData :: Maybe UTCTime
+    , rSp :: Maybe StartingPrices
+    , rEx :: Maybe ExchangePrices
+    , rOrders :: Maybe [Order]
+    , rMatches :: Maybe [Match] }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data RunnerCatalog = RunnerCatalogC
+    { rcSelectionId :: SelectionId
+    , rcRunnerName :: Text
+    , rcHandicap :: Double
+    , rcSortPriority :: Int
+    , rcMetadata :: M.Map Text Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data RunnerId = RunnerIdC
+    { riMarketId :: MarketId
+    , riSelectionId :: SelectionId
+    , riHandicap :: Maybe Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data RunnerProfitAndLoss = RunnerProfitAndLossC
+    { rpSelectionId :: Maybe SelectionId
+    , rpIfWin :: Maybe Double
+    , rpIfLose :: Maybe Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data StartingPrices = StartingPricesC
+    { spNearPrice :: Maybe Double
+    , spFarPrice :: Maybe Double
+    , spBackStakeTaken :: Maybe [PriceSize]
+    , spLayLiabilityTaken :: Maybe [PriceSize]
+    , spActualSP :: Maybe Double }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data TimeRange = TimeRangeC
+    { tFrom :: UTCTime
+    , tTo :: UTCTime }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data TimeRangeResult = TimeRangeResultC
+    { tTimeRange :: TimeRange
+    , tMarketCount :: Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data UpdateExecutionReport = UpdateExecutionReportC
+    { ueCustomerRef :: Maybe Text
+    , ueStatus :: ExecutionReportStatus
+    , ueErrorCode :: Maybe ExecutionReportErrorCode
+    , ueMarketId :: Maybe Text
+    , ueInstructionReports :: Maybe [UpdateInstructionReport] }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data UpdateInstruction = UpdateInstructionC
+    { uBetId :: BetId
+    , uNewPersistenceType :: PersistenceType }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data UpdateInstructionReport = UpdateInstructionReportC
+    { uiStatus :: InstructionReportStatus
+    , uiErrorCode :: Maybe InstructionReportErrorCode
+    , uiInstruction :: UpdateInstruction }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data UpdateOrders = UpdateOrdersC
+    { uMarketId :: MarketId
+    , uInstructions :: [UpdateInstruction]
+    , uCustomerRef :: Maybe Text }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+data VenueResult = VenueResultC
+    { vVenue :: Text
+    , vMarketCount :: Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
 data APIException = APIException { exceptionDetails :: Text
                                  , exceptionCode :: APIExceptionCode }
                     deriving ( Eq, Ord, Show, Read, Typeable )
@@ -674,84 +812,142 @@ data APIExceptionCode
     | AccessDenied
     deriving ( Eq, Ord, Show, Read, Typeable, Enum )
 
--- keep in alphabetical order so that it's easy to scan with the definitions
--- above
-makeClassy ''ClearedOrderSummary
-makeClassy ''ClearedOrderSummaryReport
-makeClassy ''Competition
-makeClassy ''CompetitionResult
-makeClassy ''CountryCodeResult
-makeClassy ''CurrentOrderSummary
-makeClassy ''CurrentOrderSummaryReport
-makeClassy ''ExBestOffersOverrides
-makeClassy ''ExchangePrices
-makeClassy ''Event
-makeClassy ''EventResult
-makeClassy ''EventType
-makeClassy ''EventTypeResult
-makeClassy ''ItemDescription
-makeClassy ''ListCompetitions
-makeClassy ''ListCountries
-makeClassy ''ListCurrentOrders
-makeClassy ''ListClearedOrders
-makeClassy ''ListEvents
-makeClassy ''ListEventTypes
-makeClassy ''ListMarketBook
-makeClassy ''ListMarketCatalogue
-makeClassy ''MarketBook
-makeClassy ''MarketCatalogue
-makeClassy ''MarketDescription
-makeClassy ''MarketFilter
-makeClassy ''Match
-makeClassy ''Order
-makeClassy ''PriceProjection
-makeClassy ''PriceSize
-makeClassy ''Runner
-makeClassy ''RunnerCatalog
-makeClassy ''RunnerId
-makeClassy ''StartingPrices
-makeClassy ''TimeRange
+makeLensesWith abbreviatedFields ''CancelExecutionReport
+makeLensesWith abbreviatedFields ''CancelInstruction
+makeLensesWith abbreviatedFields ''CancelInstructionReport
+makeLensesWith abbreviatedFields ''CancelOrders
+makeLensesWith abbreviatedFields ''ClearedOrderSummary
+makeLensesWith abbreviatedFields ''ClearedOrderSummaryReport
+makeLensesWith abbreviatedFields ''Competition
+makeLensesWith abbreviatedFields ''CompetitionResult
+makeLensesWith abbreviatedFields ''CountryCodeResult
+makeLensesWith abbreviatedFields ''CurrentOrderSummary
+makeLensesWith abbreviatedFields ''CurrentOrderSummaryReport
+makeLensesWith abbreviatedFields ''ExBestOffersOverrides
+makeLensesWith abbreviatedFields ''ExchangePrices
+makeLensesWith abbreviatedFields ''Event
+makeLensesWith abbreviatedFields ''EventResult
+makeLensesWith abbreviatedFields ''EventType
+makeLensesWith abbreviatedFields ''EventTypeResult
+makeLensesWith abbreviatedFields ''ItemDescription
+makeLensesWith abbreviatedFields ''LimitOnCloseOrder
+makeLensesWith abbreviatedFields ''LimitOrder
+makeLensesWith abbreviatedFields ''ListCompetitions
+makeLensesWith abbreviatedFields ''ListCountries
+makeLensesWith abbreviatedFields ''ListCurrentOrders
+makeLensesWith abbreviatedFields ''ListClearedOrders
+makeLensesWith abbreviatedFields ''ListEvents
+makeLensesWith abbreviatedFields ''ListEventTypes
+makeLensesWith abbreviatedFields ''ListMarketBook
+makeLensesWith abbreviatedFields ''ListMarketCatalogue
+makeLensesWith abbreviatedFields ''ListMarketProfitAndLoss
+makeLensesWith abbreviatedFields ''ListMarketTypes
+makeLensesWith abbreviatedFields ''ListTimeRanges
+makeLensesWith abbreviatedFields ''ListVenues
+makeLensesWith abbreviatedFields ''MarketBook
+makeLensesWith abbreviatedFields ''MarketCatalogue
+makeLensesWith abbreviatedFields ''MarketDescription
+makeLensesWith abbreviatedFields ''MarketFilter
+makeLensesWith abbreviatedFields ''MarketOnCloseOrder
+makeLensesWith abbreviatedFields ''MarketProfitAndLoss
+makeLensesWith abbreviatedFields ''MarketTypeResult
+makeLensesWith abbreviatedFields ''Match
+makeLensesWith abbreviatedFields ''Order
+makeLensesWith abbreviatedFields ''PlaceExecutionReport
+makeLensesWith abbreviatedFields ''PlaceInstruction
+makeLensesWith abbreviatedFields ''PlaceInstructionReport
+makeLensesWith abbreviatedFields ''PlaceOrders
+makeLensesWith abbreviatedFields ''PriceProjection
+makeLensesWith abbreviatedFields ''PriceSize
+makeLensesWith abbreviatedFields ''ReplaceExecutionReport
+makeLensesWith abbreviatedFields ''ReplaceInstruction
+makeLensesWith abbreviatedFields ''ReplaceInstructionReport
+makeLensesWith abbreviatedFields ''ReplaceOrders
+makeLensesWith abbreviatedFields ''Runner
+makeLensesWith abbreviatedFields ''RunnerCatalog
+makeLensesWith abbreviatedFields ''RunnerId
+makeLensesWith abbreviatedFields ''RunnerProfitAndLoss
+makeLensesWith abbreviatedFields ''StartingPrices
+makeLensesWith abbreviatedFields ''TimeRange
+makeLensesWith abbreviatedFields ''TimeRangeResult
+makeLensesWith abbreviatedFields ''UpdateExecutionReport
+makeLensesWith abbreviatedFields ''UpdateInstruction
+makeLensesWith abbreviatedFields ''UpdateInstructionReport
+makeLensesWith abbreviatedFields ''UpdateOrders
+makeLensesWith abbreviatedFields ''VenueResult
 
 -- the number is how many characters to drop from a record field name to get
 -- the JSON name in the API
-deriveJSON (commonStruct 3) ''ClearedOrderSummary
-deriveJSON (commonStruct 3) ''ClearedOrderSummaryReport
-deriveJSON (commonStruct 2) ''Competition
-deriveJSON (commonStruct 2) ''CompetitionResult
-deriveJSON (commonStruct 3) ''CountryCodeResult
-deriveJSON (commonStruct 2) ''CurrentOrderSummary
-deriveJSON (commonStruct 2) ''CurrentOrderSummaryReport
-deriveJSON (commonStruct 3) ''ExBestOffersOverrides
-deriveJSON (commonStruct 3) ''ExchangePrices
-deriveJSON (commonStruct 2) ''Event
-deriveJSON (commonStruct 3) ''EventResult
-deriveJSON (commonStruct 3) ''EventType
-deriveJSON (commonStruct 4) ''EventTypeResult
-deriveJSON (commonStruct 2) ''ItemDescription
-deriveJSON (commonStruct 3) ''ListCompetitions
-deriveJSON (commonStruct 4) ''ListCountries
-deriveJSON (commonStruct 4) ''ListCurrentOrders
-deriveJSON (commonStruct 4) ''ListClearedOrders
-deriveJSON (commonStruct 3) ''ListEvents
-deriveJSON (commonStruct 4) ''ListEventTypes
-deriveJSON (commonStruct 4) ''ListMarketBook
-deriveJSON (commonStruct 4) ''ListMarketCatalogue
-deriveJSON (commonStruct 3) ''MarketBook
-deriveJSON (commonStruct 3) ''MarketCatalogue
-deriveJSON (commonStruct 3) ''MarketDescription
-deriveJSON (commonStruct 3) ''MarketFilter
-deriveJSON (commonStruct 2) ''Match
-deriveJSON (commonStruct 2) ''Order
-deriveJSON (commonStruct 3) ''PriceProjection
-deriveJSON (commonStruct 3) ''PriceSize
-deriveJSON (commonStruct 2) ''Runner
-deriveJSON (commonStruct 3) ''RunnerCatalog
-deriveJSON (commonStruct 3) ''RunnerId
-deriveJSON (commonStruct 3) ''StartingPrices
-deriveJSON (commonStruct 2) ''TimeRange
+deriveJSON commonStruct ''CancelExecutionReport
+deriveJSON commonStruct ''CancelInstruction
+deriveJSON commonStruct ''CancelInstructionReport
+deriveJSON commonStruct ''CancelOrders
+deriveJSON commonStruct ''ClearedOrderSummary
+deriveJSON commonStruct ''ClearedOrderSummaryReport
+deriveJSON commonStruct ''Competition
+deriveJSON commonStruct ''CompetitionResult
+deriveJSON commonStruct ''CountryCodeResult
+deriveJSON commonStruct ''CurrentOrderSummary
+deriveJSON commonStruct ''CurrentOrderSummaryReport
+deriveJSON commonStruct ''ExBestOffersOverrides
+deriveJSON commonStruct ''ExchangePrices
+deriveJSON commonStruct ''Event
+deriveJSON commonStruct ''EventResult
+deriveJSON commonStruct ''EventType
+deriveJSON commonStruct ''EventTypeResult
+deriveJSON commonStruct ''ItemDescription
+deriveJSON commonStruct ''LimitOnCloseOrder
+deriveJSON commonStruct ''LimitOrder
+deriveJSON commonStruct ''ListCompetitions
+deriveJSON commonStruct ''ListCountries
+deriveJSON commonStruct ''ListCurrentOrders
+deriveJSON commonStruct ''ListClearedOrders
+deriveJSON commonStruct ''ListEvents
+deriveJSON commonStruct ''ListEventTypes
+deriveJSON commonStruct ''ListMarketBook
+deriveJSON commonStruct ''ListMarketCatalogue
+deriveJSON commonStruct ''ListMarketProfitAndLoss
+deriveJSON commonStruct ''ListMarketTypes
+deriveJSON commonStruct ''ListTimeRanges
+deriveJSON commonStruct ''ListVenues
+deriveJSON commonStruct ''MarketBook
+deriveJSON commonStruct ''MarketCatalogue
+deriveJSON commonStruct ''MarketDescription
+deriveJSON commonStruct ''MarketFilter
+deriveJSON commonStruct ''MarketOnCloseOrder
+deriveJSON commonStruct ''MarketProfitAndLoss
+deriveJSON commonStruct ''MarketTypeResult
+deriveJSON commonStruct ''Match
+deriveJSON commonStruct ''Order
+deriveJSON commonStruct ''PlaceExecutionReport
+deriveJSON commonStruct ''PlaceInstruction
+deriveJSON commonStruct ''PlaceInstructionReport
+deriveJSON commonStruct ''PlaceOrders
+deriveJSON commonStruct ''PriceProjection
+deriveJSON commonStruct ''PriceSize
+deriveJSON commonStruct ''ReplaceExecutionReport
+deriveJSON commonStruct ''ReplaceInstruction
+deriveJSON commonStruct ''ReplaceInstructionReport
+deriveJSON commonStruct ''ReplaceOrders
+deriveJSON commonStruct ''Runner
+deriveJSON commonStruct ''RunnerCatalog
+deriveJSON commonStruct ''RunnerId
+deriveJSON commonStruct ''RunnerProfitAndLoss
+deriveJSON commonStruct ''StartingPrices
+deriveJSON commonStruct ''TimeRange
+deriveJSON commonStruct ''TimeRangeResult
+deriveJSON commonStruct ''UpdateExecutionReport
+deriveJSON commonStruct ''UpdateInstruction
+deriveJSON commonStruct ''UpdateInstructionReport
+deriveJSON commonStruct ''UpdateOrders
+deriveJSON commonStruct ''VenueResult
 
 deriveJSON (commonEnum 0) ''BetStatus
+deriveJSON (commonEnum 1) ''ExecutionReportErrorCode
+deriveJSON (commonEnum 1) ''ExecutionReportStatus
 deriveJSON (commonEnum 2) ''GroupBy
+deriveJSON (commonEnum 0) ''InstructionReportErrorCode
+deriveJSON (commonEnum 0) ''InstructionReportStatus
 deriveJSON (commonEnum 0) ''MarketBettingType
 deriveJSON (commonEnum 0) ''MarketProjection
 deriveJSON (commonEnum 0) ''MarketSort
@@ -766,8 +962,12 @@ deriveJSON (commonEnum 0) ''PriceData
 deriveJSON (commonEnum 0) ''RollupModel
 deriveJSON (commonEnum 0) ''RunnerStatus
 deriveJSON (commonEnum 0) ''SortDir
+deriveJSON (commonEnum 0) ''TimeGranularity
 
 deriveJSON (commonEnum 0) ''APIExceptionCode
+
+instance Request CancelOrders [CancelExecutionReport] where
+    requestMethod _ = "cancelOrders"
 
 instance Request ListCompetitions [CompetitionResult] where
     requestMethod _ = "listCompetitions"
@@ -793,6 +993,27 @@ instance Request ListMarketBook [MarketBook] where
 instance Request ListMarketCatalogue [MarketCatalogue] where
     requestMethod _ = "listMarketCatalogue"
 
+instance Request ListMarketProfitAndLoss [MarketProfitAndLoss] where
+    requestMethod _ = "listMarketProfitAndLoss"
+
+instance Request ListMarketTypes [MarketTypeResult] where
+    requestMethod _ = "listMarketTypes"
+
+instance Request ListTimeRanges [TimeRangeResult] where
+    requestMethod _ = "listTimeRanges"
+
+instance Request ListVenues [VenueResult] where
+    requestMethod _ = "listVenues"
+
+instance Request PlaceOrders PlaceExecutionReport where
+    requestMethod _ = "placeOrders"
+
+instance Request ReplaceOrders ReplaceExecutionReport where
+    requestMethod _ = "replaceOrders"
+
+instance Request UpdateOrders UpdateExecutionReport where
+    requestMethod _ = "updateOrders"
+
 -- | Data types in Betfair API that have some kind of default.
 --
 -- All `Maybe` fields in records are set to `Nothing`, all lists and sets will
@@ -800,6 +1021,9 @@ instance Request ListMarketCatalogue [MarketCatalogue] where
 -- typeclass.
 class Default a where
     def :: a
+
+instance Default CancelOrders where
+    def = CancelOrdersC Nothing Nothing Nothing
 
 instance Default ExBestOffersOverrides where
     def = ExBestOffersOverridesC Nothing Nothing Nothing Nothing Nothing
@@ -809,13 +1033,13 @@ instance Default ExchangePrices where
 
 instance Default ListCompetitions where
     def = ListCompetitionsC
-          { _lcfilter = def
-          , _lclocale = Nothing }
+          { lcFilter = def
+          , lcLocale = Nothing }
 
 instance Default ListCountries where
     def = ListCountriesC
-          { _lcsfilter = def
-          , _lcslocale = Nothing }
+          { lcsFilter = def
+          , lcsLocale = Nothing }
 
 instance Default ListCurrentOrders where
     def = ListCurrentOrdersC Nothing Nothing Nothing Nothing Nothing Nothing
@@ -829,31 +1053,50 @@ instance Default ListClearedOrders where
 
 instance Default ListEvents where
     def = ListEventsC
-          { _lefilter = def
-          , _lelocale = Nothing }
+          { leFilter = def
+          , leLocale = Nothing }
 
 instance Default ListEventTypes where
     def = ListEventTypesC
-          { _letfilter = def
-          , _letlocale = Nothing }
+          { letFilter = def
+          , letLocale = Nothing }
 
 instance Default ListMarketBook where
     def = ListMarketBookC
-          { _lmbmarketIds = []
-          , _lmbpriceProjection = Nothing
-          , _lmborderProjection = Nothing
-          , _lmbmatchProjection = Nothing
-          , _lmbcurrencyCode = Nothing
-          , _lmblocale = Nothing }
+          { lmbMarketIds = []
+          , lmbPriceProjection = Nothing
+          , lmbOrderProjection = Nothing
+          , lmbMatchProjection = Nothing
+          , lmbCurrencyCode = Nothing
+          , lmbLocale = Nothing }
 
 -- | `_lmcmaxResults` is set to 1000.
 instance Default ListMarketCatalogue where
     def = ListMarketCatalogueC
-          { _lmcfilter = def
-          , _lmcmarketProjection = Nothing
-          , _lmcsort = Nothing
-          , _lmcmaxResults = 1000
-          , _lmclocale = Nothing }
+          { lmcFilter = def
+          , lmcMarketProjection = Nothing
+          , lmcSort = Nothing
+          , lmcMaxResults = 1000
+          , lmcLocale = Nothing }
+
+instance Default ListMarketProfitAndLoss where
+    def = ListMarketProfitAndLossC S.empty Nothing Nothing Nothing
+
+instance Default ListMarketTypes where
+    def = ListMarketTypesC
+          { lmtFilter = def
+          , lmtLocale = Nothing }
+
+-- | `TimeGranularity` is set to `Days`.
+instance Default ListTimeRanges where
+    def = ListTimeRangesC
+          { ltFilter = def
+          , ltGranularity = Days }
+
+instance Default ListVenues where
+    def = ListVenuesC
+          { lvFilter = def
+          , lvLocale = Nothing }
 
 instance Default MarketFilter where
     def = MarketFilterC Nothing Nothing Nothing Nothing Nothing Nothing Nothing
@@ -861,4 +1104,35 @@ instance Default MarketFilter where
 
 instance Default PriceProjection where
     def = PriceProjectionC Nothing Nothing Nothing Nothing
+
+
+-- | Things that have a non-ambiguous way to extract a `Bet` from them.
+--
+-- Note that terminology does not match up correctly, `Bet` is about
+-- odds-markets but some bets don't work with odds. However with this
+-- construction, price is matched to odds and size is matched to stake.
+class HasBet a where
+    bet :: Lens' a (Bet Double Double)
+
+instance HasBet CurrentOrderSummary where
+    bet = lens (\cosum -> Bet (cSide cosum)
+                            (psPrice $ cPriceSize cosum)
+                            (psSize $ cPriceSize cosum))
+               (\old new -> old { cSide = new^.betType
+                                , cPriceSize = PriceSizeC
+                                    { psPrice = new^.odds
+                                    , psSize = new^.stake } })
+
+instance HasBet Match where
+    bet = lens (\m -> Bet (mSide m) (mPrice m) (mSize m))
+               (\old new -> old { mSide = new^.betType
+                                , mPrice = new^.odds
+                                , mSize = new^.stake })
+
+instance HasBet Order where
+    bet = lens (\o -> Bet (oSide o) (oPrice o) (oSize o))
+               (\old new -> old { oSide = new^.betType
+                                , oPrice = new^.odds
+                                , oSize = new^.stake })
+
 

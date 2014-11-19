@@ -11,10 +11,10 @@ module Network.Betfair.Types.TH
 import Data.Aeson.TH
 import Data.Char
 
-commonStruct :: Int -> Options
-commonStruct ln =
+commonStruct :: Options
+commonStruct =
     defaultOptions {
-        fieldLabelModifier = drop ln
+        fieldLabelModifier = lowerFirst . dropPrefix
       , omitNothingFields = True
     }
 
@@ -24,6 +24,16 @@ underscorify str = reverse $ rec str [] where
   rec (x:y:rest) accum
     | isLower x && isUpper y = rec rest $ y:'_':x:accum
   rec (z:rest) accum = rec rest (z:accum)
+
+dropPrefix :: String -> String
+dropPrefix [] = []
+dropPrefix (x:rest)
+    | isUpper x = x:rest
+    | otherwise = dropPrefix rest
+
+lowerFirst :: String -> String
+lowerFirst [] = []
+lowerFirst (x:rest) = toLower x:rest
 
 commonEnum :: Int -> Options
 commonEnum ln =
