@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Noeda/bet.svg?branch=master)](https://travis-ci.org/Noeda/bet)
+
 This library contains Haskell bindings to the Betfair API.
 
 <https://developer.betfair.com/default/api-s-and-services/sports-api/sports-overview/>
