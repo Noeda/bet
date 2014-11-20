@@ -21,7 +21,7 @@ description:
     This library enforces limits on the number of calls you can do to Betfair
     API in a second, to help you avoid data charges. See
     "Network.Betfair.Unsafe".
-homepage:            https://github.com/Noeda/hs-bet/
+homepage:            https://github.com/Noeda/bet/
 license:             MIT
 license-file:        LICENSE
 author:              Mikko Juola
