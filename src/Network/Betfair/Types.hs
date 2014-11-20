@@ -987,7 +987,7 @@ deriveJSON (commonEnum 0) ''TimeGranularity
 
 deriveJSON (commonEnum 0) ''APIExceptionCode
 
-instance Request CancelOrders [CancelExecutionReport] where
+instance Request CancelOrders CancelExecutionReport where
     requestMethod _ = "SportsAPING/v1.0/cancelOrders"
     requestUrl _ = bettingUrl
 
