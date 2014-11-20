@@ -7,12 +7,20 @@
 --
 
 module Network.Betfair.Internal
-    ( SessionKey
-    , LoginResponse(..)
+    (
+    -- * Login procedures
+      LoginResponse(..)
+    , SessionKey
+    -- * API call limit
     , NumberOfRequests
     , rateLimit
     , workRateLimit
-    , Request(..) )
+    -- * Requests
+    , Request(..)
+    -- ** Betfair URLs
+    , bettingUrl
+    , heartbeatUrl
+    , Url )
     where
 
 import Control.Applicative
@@ -73,8 +81,17 @@ workRateThread = forever $ do
       else when (x > 0) $
                threadDelay $ ceiling $ (1000000 :: Double) / x
 
+type Url = String
+
+bettingUrl :: Url
+bettingUrl = "https://api.betfair.com/exchange/betting/json-rpc/v1"
+
+heartbeatUrl :: Url
+heartbeatUrl = "https://api.betfair.com/exchange/heartbeat/json-rpc/v1"
+
 -- | Class of types that can be used as requests to Betfair, with their
 -- response defined as the second type variable.
 class (ToJSON a, FromJSON b) => Request a b | a -> b where
     requestMethod :: Proxy a -> Text
+    requestUrl :: Proxy a -> Url
 

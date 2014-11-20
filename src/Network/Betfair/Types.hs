@@ -59,6 +59,15 @@ import Network.Betfair.Internal
 import Network.Betfair.Types.TH
 import Prelude hiding ( filter, id )
 
+data ActionPerformed
+    = ANone
+    | ACancellationRequestSubmitted
+    | AAllBetsCancelled
+    | ASomeBetsNotCancelled
+    | ACancellationRequestError
+    | ACancellationStatusUnknown
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+
 data BetStatus
     = Settled
     | Voided
@@ -414,6 +423,15 @@ data EventType = EventTypeC
 data EventTypeResult = EventTypeResultC
     { etrEventType :: EventType
     , etrMarketCount :: Int }
+    deriving ( Eq, Ord, Show, Read, Typeable )
+
+newtype Heartbeat = HeartbeatC
+        { hPreferredTimeoutSeconds :: Int }
+        deriving ( Eq, Ord, Show, Read, Typeable )
+
+data HeartbeatReport = HeartbeatReportC
+    { hActionPerformed :: ActionPerformed
+    , hActualTimeoutSeconds :: Int }
     deriving ( Eq, Ord, Show, Read, Typeable )
 
 data ItemDescription = ItemDescriptionC
@@ -895,6 +913,8 @@ deriveJSON commonStruct ''Event
 deriveJSON commonStruct ''EventResult
 deriveJSON commonStruct ''EventType
 deriveJSON commonStruct ''EventTypeResult
+deriveJSON commonStruct ''Heartbeat
+deriveJSON commonStruct ''HeartbeatReport
 deriveJSON commonStruct ''ItemDescription
 deriveJSON commonStruct ''LimitOnCloseOrder
 deriveJSON commonStruct ''LimitOrder
@@ -942,6 +962,7 @@ deriveJSON commonStruct ''UpdateInstructionReport
 deriveJSON commonStruct ''UpdateOrders
 deriveJSON commonStruct ''VenueResult
 
+deriveJSON (commonEnum 1) ''ActionPerformed
 deriveJSON (commonEnum 0) ''BetStatus
 deriveJSON (commonEnum 1) ''ExecutionReportErrorCode
 deriveJSON (commonEnum 1) ''ExecutionReportStatus
@@ -967,52 +988,72 @@ deriveJSON (commonEnum 0) ''TimeGranularity
 deriveJSON (commonEnum 0) ''APIExceptionCode
 
 instance Request CancelOrders [CancelExecutionReport] where
-    requestMethod _ = "cancelOrders"
+    requestMethod _ = "SportsAPING/v1.0/cancelOrders"
+    requestUrl _ = bettingUrl
 
 instance Request ListCompetitions [CompetitionResult] where
-    requestMethod _ = "listCompetitions"
+    requestMethod _ = "SportsAPING/v1.0/listCompetitions"
+    requestUrl _ = bettingUrl
 
 instance Request ListCountries [CountryCodeResult] where
-    requestMethod _ = "listCountries"
+    requestMethod _ = "SportsAPING/v1.0/listCountries"
+    requestUrl _ = bettingUrl
 
 instance Request ListCurrentOrders CurrentOrderSummaryReport where
-    requestMethod _ = "listCurrentOrders"
+    requestMethod _ = "SportsAPING/v1.0/listCurrentOrders"
+    requestUrl _ = bettingUrl
 
 instance Request ListClearedOrders ClearedOrderSummaryReport where
-    requestMethod _ = "listClearedOrders"
+    requestMethod _ = "SportsAPING/v1.0/listClearedOrders"
+    requestUrl _ = bettingUrl
 
 instance Request ListEvents [EventResult] where
-    requestMethod _ = "listEvents"
+    requestMethod _ = "SportsAPING/v1.0/listEvents"
+    requestUrl _ = bettingUrl
 
 instance Request ListEventTypes [EventTypeResult] where
-    requestMethod _ = "listEventTypes"
+    requestMethod _ = "SportsAPING/v1.0/listEventTypes"
+    requestUrl _ = bettingUrl
 
 instance Request ListMarketBook [MarketBook] where
-    requestMethod _ = "listMarketBook"
+    requestMethod _ = "SportsAPING/v1.0/listMarketBook"
+    requestUrl _ = bettingUrl
 
 instance Request ListMarketCatalogue [MarketCatalogue] where
-    requestMethod _ = "listMarketCatalogue"
+    requestMethod _ = "SportsAPING/v1.0/listMarketCatalogue"
+    requestUrl _ = bettingUrl
 
 instance Request ListMarketProfitAndLoss [MarketProfitAndLoss] where
-    requestMethod _ = "listMarketProfitAndLoss"
+    requestMethod _ = "SportsAPING/v1.0/listMarketProfitAndLoss"
+    requestUrl _ = bettingUrl
 
 instance Request ListMarketTypes [MarketTypeResult] where
-    requestMethod _ = "listMarketTypes"
+    requestMethod _ = "SportsAPING/v1.0/listMarketTypes"
+    requestUrl _ = bettingUrl
 
 instance Request ListTimeRanges [TimeRangeResult] where
-    requestMethod _ = "listTimeRanges"
+    requestMethod _ = "SportsAPING/v1.0/listTimeRanges"
+    requestUrl _ = bettingUrl
 
 instance Request ListVenues [VenueResult] where
-    requestMethod _ = "listVenues"
+    requestMethod _ = "SportsAPING/v1.0/listVenues"
+    requestUrl _ = bettingUrl
 
 instance Request PlaceOrders PlaceExecutionReport where
-    requestMethod _ = "placeOrders"
+    requestMethod _ = "SportsAPING/v1.0/placeOrders"
+    requestUrl _ = bettingUrl
 
 instance Request ReplaceOrders ReplaceExecutionReport where
-    requestMethod _ = "replaceOrders"
+    requestMethod _ = "SportsAPING/v1.0/replaceOrders"
+    requestUrl _ = bettingUrl
 
 instance Request UpdateOrders UpdateExecutionReport where
-    requestMethod _ = "updateOrders"
+    requestMethod _ = "SportsAPING/v1.0/updateOrders"
+    requestUrl _ = bettingUrl
+
+instance Request Heartbeat HeartbeatReport where
+    requestMethod _ = "HeartbeatAPING/v1.0/heartbeat"
+    requestUrl _ = heartbeatUrl
 
 -- | Data types in Betfair API that have some kind of default.
 --

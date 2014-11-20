@@ -81,7 +81,7 @@ data Credentials = Credentials {
   deriving ( Eq, Ord, Show, Read, Typeable )
 makeClassy ''Credentials
 
-data Work = Work !JsonRPCQuery !(MVar (Either SomeException BL.ByteString))
+data Work = Work !Url !JsonRPCQuery !(MVar (Either SomeException BL.ByteString))
             deriving ( Eq, Typeable )
 
 -- The type of all JSON-based queries sent out
@@ -112,7 +112,7 @@ instance FromJSON a => FromJSON (JsonRPC a) where
 instance ToJSON JsonRPCQuery where
     toJSON (JsonRPCQuery {..}) =
         object [ "jsonrpc" .= ("2.0" :: Text)
-               , "method" .= ("SportsAPING/v1.0/" <> methodName :: Text)
+               , "method" .= methodName
                , "id" .= (1 :: Int)
                , "params" .= params ]
 
@@ -160,10 +160,10 @@ withBetfair (Betfair mvar) action = withMVar mvar $ \case
     Nothing -> throwM BetfairIsClosed
     Just bhandle -> action bhandle
 
-work :: (FromJSON a) => Betfair -> JsonRPCQuery -> IO a
-work bf query = withBetfair bf $ \handle -> do
+work :: (FromJSON a) => Betfair -> Url -> JsonRPCQuery -> IO a
+work bf url query = withBetfair bf $ \handle -> do
     result <- newEmptyMVar
-    putMVar (_workChannel handle) $ Work query result
+    putMVar (_workChannel handle) $ Work url query result
     takeMVar result >>= \case
         Left exc -> throwM exc
         Right result -> case decode result of
@@ -202,21 +202,25 @@ workLoop :: SessionKey -> Credentials -> Manager -> MVar Work -> IO ()
 workLoop session_key credentials m work_mvar = forever $ do
     work <- takeMVar work_mvar
     case work of
-        Work sending result_mvar -> do
+        Work url sending result_mvar -> do
             flip onException (tryPutMVar result_mvar $ Left $
                               toException BetfairIsClosed) $ do
                 -- --- IMPORTANT API LIMIT DO NOT TOUCH --- --
                 workRateLimit -- make sure we don't make too many API calls per
                               -- second or we incur Betfair charges
 
-                request <- betfairRequest session_key credentials sending
+                request <- betfairRequest session_key credentials sending url
                 withHTTP request m $ \response -> do
                     body <- readBodyLimited 50000000 response
                     putMVar result_mvar (Right body)
 
-betfairRequest :: SessionKey -> Credentials -> JsonRPCQuery -> IO PH.Request
-betfairRequest session_key (Credentials{..}) query = do
-    req <- parseUrl $ "https://api.betfair.com/exchange/betting/json-rpc/v1"
+betfairRequest :: SessionKey
+               -> Credentials
+               -> JsonRPCQuery
+               -> Url
+               -> IO PH.Request
+betfairRequest session_key (Credentials{..}) query url = do
+    req <- parseUrl url
     return $ req { method = "POST"
                  , requestBody = RequestBodyBS $ BL.toStrict $ encode query
                  , requestHeaders = requestHeaders req <>
@@ -311,6 +315,7 @@ closeBetfairHandle (_betfairThread -> tid) = throwTo tid CloseBetfair
 request :: forall a b m. (MonadIO m, Network.Betfair.Internal.Request a b)
         => a -> Betfair -> m b
 request req bf = liftIO $
-    work bf (JsonRPCQuery { methodName = requestMethod (Proxy :: Proxy a)
+    work bf (requestUrl (Proxy :: Proxy a))
+            (JsonRPCQuery { methodName = requestMethod (Proxy :: Proxy a)
                           , params = toJSON req })
 

@@ -3,15 +3,20 @@
 
 name:                bet
 version:             0.1.0.0
-synopsis:            Sports betting
+synopsis:            Betfair API bindings. Bet on sports on betting exchanges.
 description:
-    Bet on sports using this library
+    This library contains bindings to the Betfair API.
     .
-    This library has:
+    <https://developer.betfair.com/default/api-s-and-services/sports-api/sports-overview/>
     .
-        * Data types and functions to work with odds and stakes
-        * Betfair and Betdaq API implementation.
+    At the moment, the \'Betting API\' and \'Heartbeat API\' is implemented.
+    The \'Accounts API\' is not.
     .
+    See "Network.Betfair".
+    .
+    CAUTION: These are experimental bindings. Because of the financially
+    dangerous nature of betting, I advice you to have a contingency plan if
+    something in the library breaks down.
 homepage:            https://github.com/Noeda/hs-bet/
 license:             MIT
 license-file:        LICENSE
