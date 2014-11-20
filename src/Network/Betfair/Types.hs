@@ -1086,7 +1086,7 @@ instance Default ListCurrentOrders where
     def = ListCurrentOrdersC Nothing Nothing Nothing Nothing Nothing Nothing
                              Nothing Nothing
 
--- | `_lcrbetStatus` is `Settled`.
+-- | `lcrBetStatus` is `Settled`.
 instance Default ListClearedOrders where
     def = ListClearedOrdersC Settled Nothing Nothing Nothing Nothing Nothing
                              Nothing Nothing Nothing Nothing Nothing Nothing
@@ -1111,7 +1111,7 @@ instance Default ListMarketBook where
           , lmbCurrencyCode = Nothing
           , lmbLocale = Nothing }
 
--- | `_lmcmaxResults` is set to 1000.
+-- | `lmcMaxResults` is set to 1000.
 instance Default ListMarketCatalogue where
     def = ListMarketCatalogueC
           { lmcFilter = def

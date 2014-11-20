@@ -12,6 +12,8 @@ module Network.Betfair.Internal
       LoginResponse(..)
     , SessionKey
     -- * API call limit
+    --
+    -- | I really advice against using these from user code.
     , NumberOfRequests
     , rateLimit
     , workRateLimit
