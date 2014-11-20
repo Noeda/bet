@@ -59,6 +59,7 @@ import Data.IORef
 import Data.Monoid
 import Data.Proxy
 import Data.Text ( Text )
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Typeable
 import Network.Betfair.Internal
@@ -68,8 +69,6 @@ import OpenSSL.Session
 import Pipes hiding ( Proxy )
 import Pipes.HTTP as PH hiding ( Proxy )
 import System.Mem.Weak
-
-import Debug.Trace
 
 -- | Login credentials.
 data Credentials = Credentials {
@@ -167,7 +166,7 @@ work bf url query = withBetfair bf $ \handle -> do
     takeMVar result >>= \case
         Left exc -> throwM exc
         Right result -> case decode result of
-            Nothing -> traceShow result $ throwM $ ParsingFailure "while trying to do work"
+            Nothing -> throwM $ ParsingFailure $ "Betfair behaved in unexpected way. Received raw string: " <> (T.pack $ show result)
             Just (JsonRPC (Left exc)) -> throwM exc
             Just (JsonRPC (Right x)) -> return x
 
