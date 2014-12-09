@@ -28,6 +28,35 @@
 -- Use `request` to make calls to Betfair. Look at "Network.Betfair.Types" for
 -- commands to use with `request`.
 --
+-- == Examples
+--
+-- This example opens a connection to Betfair and lists all your current bets.
+--
+-- @
+--    {-\# LANGUAGE OverloadedStrings \#-}
+--
+--    import Network.Betfair
+--
+--    -- Use your actual credentials here. You need to see Betfair
+--    -- documentation about that
+--    credentials :: Credentials
+--    credentials = {
+--          _username = "Mr. Example"
+--        , _password = "supersecret"
+--        , _certificatePrivateKeyFile = "ssl/supersecret-client.key"
+--        , _certificateCertificateFile = "ssl/supersecret-client.crt"
+--        , _apiKey = "abcde12345"
+--        }
+--
+--    main = do
+--        bf <- openBetfair credentials
+--        -- Many request types have a default (so you can use 'default'
+--        -- function) but if they don't, you can check Network.Betfair.Types
+--        -- module for the all the data types you can use in request.
+--        results <- request (default { lcoOrderBy = Just ByMatchTime } :: ListCurrentOrders)
+--        print results
+--
+-- @
 
 module Network.Betfair
     (
