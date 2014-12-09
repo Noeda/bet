@@ -30,6 +30,6 @@ setAPIRateLimit nor
     | otherwise = atomicModifyIORef' rateLimit $ \_ -> ( nor, () )
 
 -- | Returns the current global rate limit.
-getAPIRateLimit :: IO Double
+getAPIRateLimit :: IO NumberOfRequests
 getAPIRateLimit = readIORef rateLimit
 
