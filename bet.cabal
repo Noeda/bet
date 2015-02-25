@@ -26,7 +26,7 @@ license:             MIT
 license-file:        LICENSE
 author:              Mikko Juola
 maintainer:          mikjuo@gmail.com
-copyright:           Copyright (C) 2014 Mikko Juola
+copyright:           Copyright (C) 2014-2015 Mikko Juola
 category:            Network
 build-type:          Simple
 stability:           experimental
