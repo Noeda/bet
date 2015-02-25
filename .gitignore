@@ -1,5 +1,5 @@
 properties
-login-test
+^login-test
 ssl/
 .cabal-sandbox/
 cabal.sandbox.config
