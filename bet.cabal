@@ -1,5 +1,5 @@
 name:                bet
-version:             0.1.2.0
+version:             0.1.2.1
 synopsis:            Betfair API bindings. Bet on sports on betting exchanges.
 description:
     This library contains Haskell bindings to the Betfair API.
@@ -16,7 +16,7 @@ description:
     something in the library breaks down.
     .
     In particular, check the Betfair API documentation page for which version
-    it is at the moment. This library is written against version 2.0 exactly.
+    it is at the moment. This library is written against version 2.1.
     .
     This library enforces limits on the number of calls you can do to Betfair
     API in a second, to help you avoid data charges. See
