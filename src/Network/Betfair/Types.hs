@@ -603,7 +603,7 @@ data MarketFilter = MarketFilterC
     , mfMarketBettingTypes :: Maybe (S.Set MarketBettingType)
     , mfMarketCountries :: Maybe (S.Set Country)
     , mfMarketTypeCodes :: Maybe (S.Set MarketTypeCode)
-    , mfMarketStartTime :: Maybe (UTCTime, UTCTime)
+    , mfMarketStartTime :: Maybe TimeRange
     , mfWithOrders :: Maybe (S.Set OrderStatus) }
     deriving ( Eq, Ord, Show, Read, Typeable )
 
