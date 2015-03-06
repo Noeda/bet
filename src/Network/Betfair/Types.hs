@@ -513,7 +513,7 @@ data ListMarketBook = ListMarketBookC
 data ListMarketCatalogue = ListMarketCatalogueC
     { lmcFilter :: MarketFilter
     , lmcMarketProjection :: Maybe (S.Set MarketProjection)
-    , lmcSort :: Maybe (S.Set MarketSort)
+    , lmcSort :: Maybe MarketSort
     , lmcMaxResults :: Int
     , lmcLocale :: Maybe Text }
     deriving ( Eq, Ord, Show, Read, Typeable )
