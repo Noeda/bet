@@ -9,12 +9,12 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 -- | This module defines most data types in the betting API of Betfair API,
--- corresponding to version 2.0. Refer to Betfair API documentation for
+-- corresponding to version 2.1. Refer to Betfair API documentation for
 -- meanings of the values.
 --
 -- <https://developer.betfair.com/default/api-s-and-services/sports-api/sports-overview/>
 --
--- This module does not have a proper Haddock index so pay attention here.
+-- This module does not have a proper Haddock index yet.
 --
 -- Where possible, data types are in 1:1 correspondence to the ones documented
 -- in the API. However, because there are name clashes, most record field names
