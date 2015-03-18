@@ -6,6 +6,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GADTs #-}
@@ -46,18 +47,22 @@ import Control.Applicative
 import Control.Lens
 import Data.Aeson
 import Data.Bifoldable
+import Data.Binary ( Binary )
 import Data.Bitraversable
+import Data.Data
 import Data.Foldable
 import Data.Semigroup
 import Data.Semigroup.Foldable
 import Data.Semigroup.Bifoldable
 import Data.Traversable
-import Data.Typeable
+import GHC.Generics
 
 -- | A bet type. In a betting exchange, you usually can choose if you want to
 -- make a back or lay bet. With traditional bookmakers, you usually only back.
 data BetType = Back | Lay
-               deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+               deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary BetType
 
 -- | An `Iso` from `BetType` to `Bool`.
 betBool :: Iso' BetType Bool
@@ -96,7 +101,11 @@ data Bet odds money = Bet !BetType odds money
                                , Read
                                , Show
                                , Ord
-                               , Eq )
+                               , Eq
+                               , Data
+                               , Generic )
+
+instance (Binary a, Binary b) => Binary (Bet a b)
 
 instance Foldable1 (Bet odds)
 instance Bifoldable1 Bet
@@ -122,7 +131,11 @@ newtype BetFlipped money odds = BetFlipped { getFlipped :: Bet odds money }
                                          , Read
                                          , Show
                                          , Ord
-                                         , Eq )
+                                         , Eq
+                                         , Data
+                                         , Generic )
+
+instance (Binary a, Binary b) => Binary (BetFlipped a b)
 
 instance Functor (BetFlipped money) where
     fmap f (getFlipped -> Bet t o m) = BetFlipped $ Bet t (f o) m

@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 -- | This module defines most data types in the betting API of Betfair API,
@@ -50,11 +51,13 @@ import Control.Lens
 import Data.Aeson
 import Data.Aeson.TH
 import Data.Bet
+import Data.Binary ( Binary )
+import Data.Data
 import Data.Text ( Text )
 import Data.Time
-import Data.Typeable
 import qualified Data.Set as S
 import qualified Data.Map.Lazy as M
+import GHC.Generics
 import Network.Betfair.Internal
 import Network.Betfair.Types.TH
 import Prelude hiding ( filter, id )
@@ -66,14 +69,18 @@ data ActionPerformed
     | ASomeBetsNotCancelled
     | ACancellationRequestError
     | ACancellationStatusUnknown
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary ActionPerformed
 
 data BetStatus
     = Settled
     | Voided
     | Lapsed
     | Cancelled
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary BetStatus
 
 data ExecutionReportErrorCode
     = RErrorInMatcher
@@ -93,14 +100,18 @@ data ExecutionReportErrorCode
     | RNoActionRequired
     | RServiceUnavailable
     | RRejectedByRegulator
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary ExecutionReportErrorCode
 
 data ExecutionReportStatus
     = ESuccess
     | EFailure
     | EProcessedWithErrors
     | ETimeout
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary ExecutionReportStatus
 
 data GroupBy
     = GBEventType
@@ -108,7 +119,9 @@ data GroupBy
     | GBMarket
     | GBSide
     | GBBet
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary GroupBy
 
 data InstructionReportErrorCode
     = InvalidBetSize
@@ -131,13 +144,17 @@ data InstructionReportErrorCode
     | CancelledNotPlaced
     | RelatedActionFailed
     | NoActionRequired
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary InstructionReportErrorCode
 
 data InstructionReportStatus
     = Success
     | Failure
     | Timeout
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary InstructionReportStatus
 
 data MarketBettingType
     = Odds
@@ -146,7 +163,9 @@ data MarketBettingType
     | AsianHandicapDoubleLine
     | AsianHandicapSingleLine
     | FixedOdds
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary MarketBettingType
 
 data MarketProjection
     = Competition
@@ -156,7 +175,9 @@ data MarketProjection
     | MarketDescription
     | RunnerDescription
     | RunnerMetadata
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary MarketProjection
 
 data MarketSort
     = MinimumTraded
@@ -165,20 +186,26 @@ data MarketSort
     | MaximumAvailable
     | FirstToStart
     | LastToStart
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary MarketSort
 
 data MarketStatus
     = Inactive
     | Open
     | Suspended
     | Closed
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary MarketStatus
 
 data MatchProjection
     = NoRollup
     | RolledUpByPrice
     | RolledUpByAvgPrice
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary MatchProjection
 
 data OrderBy
     = ByBet
@@ -187,30 +214,40 @@ data OrderBy
     | ByPlaceTime
     | BySettledTime
     | ByVoidTime
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary OrderBy
 
 data OrderProjection
     = OpAll
     | OpExecutable
     | OpExecutionComplete
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary OrderProjection
 
 data OrderStatus
     = ExecutionComplete
     | Executable
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary OrderStatus
 
 data OrderType
     = Limit
     | LimitOnClose
     | MarketOnClose
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary OrderType
 
 data PersistenceType
     = PtLapse
     | PtPersist
     | PtMarketOnClose
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary PersistenceType
 
 data PriceData
     = SpAvailable
@@ -218,14 +255,18 @@ data PriceData
     | ExBestOffers
     | ExAllOffers
     | ExTraded
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary PriceData
 
 data RollupModel
     = Stake
     | Payout
     | ManagedLiability
     | None
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary RollupModel
 
 data RunnerStatus
     = Active
@@ -234,59 +275,66 @@ data RunnerStatus
     | RemovedVacant
     | Removed
     | Hidden
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary RunnerStatus
 
 type Side = BetType
 
 data SortDir
     = EarliestToLatest
     | LatestToEarliest
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
+
+instance Binary SortDir
 
 data TimeGranularity
     = Days
     | Hours
     | Minutes
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
 
+instance Binary TimeGranularity
 
 newtype BetId = BetId { getBetId :: Text }
-                deriving ( Eq, Ord, Show, Read, Typeable, FromJSON, ToJSON )
+                deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic, FromJSON, ToJSON )
 
 newtype Country = Country { getCountry :: Text }
                   deriving ( Eq, Ord, Show, Read, Typeable
-                           , FromJSON, ToJSON )
+                           , FromJSON, ToJSON, Data, Generic )
 
 newtype CompetitionId = CompetitionId { getCompetitionId :: Text }
                         deriving ( Eq, Ord, Show, Read, Typeable
-                                 , FromJSON, ToJSON )
+                                 , FromJSON, ToJSON, Data, Generic )
 
 newtype EventId = EventId { getEventId :: Text }
                   deriving ( Eq, Ord, Show, Read, Typeable
-                           , FromJSON, ToJSON )
+                           , FromJSON, ToJSON, Data, Generic )
 
 newtype EventTypeId = EventTypeId { getEventTypeId :: Text }
                       deriving ( Eq, Ord, Show, Read, Typeable
-                               , FromJSON, ToJSON )
+                               , FromJSON, ToJSON, Data, Generic )
 
 newtype MarketId = MarketId { getMarketId :: Text }
                    deriving ( Eq, Ord, Show, Read, Typeable
-                            , FromJSON, ToJSON )
+                            , FromJSON, ToJSON, Data, Generic )
 
 newtype MarketTypeCode = MarketTypeCode { getMarketTypeCode :: Text }
                          deriving ( Eq, Ord, Show, Read, Typeable
-                                  , FromJSON, ToJSON )
+                                  , FromJSON, ToJSON, Data, Generic )
 
 newtype MatchId = MatchId { getMatchId :: Text }
-                  deriving ( Eq, Ord, Show, Read, Typeable, FromJSON, ToJSON )
+                  deriving ( Eq, Ord, Show, Read, Typeable, FromJSON, ToJSON, Data, Generic )
 
 newtype SelectionId = SelectionId { getSelectionId :: Int }
                       deriving ( Eq, Ord, Show, Read, Typeable
-                               , FromJSON, ToJSON )
+                               , FromJSON, ToJSON, Data, Generic )
+
+instance Binary SelectionId
 
 newtype Venue = Venue { getVenue :: Text }
                 deriving ( Eq, Ord, Show, Read, Typeable
-                         , FromJSON, ToJSON )
+                         , FromJSON, ToJSON, Data, Generic )
 
 data CancelExecutionReport = CancelExecutionReportC
     { ceCustomerRef :: Maybe Text
@@ -294,12 +342,12 @@ data CancelExecutionReport = CancelExecutionReportC
     , ceErrorCode :: Maybe ExecutionReportErrorCode
     , ceMarketId :: Maybe MarketId
     , ceInstructionReports :: [CancelInstructionReport] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data CancelInstruction = CancelInstructionC
     { ciBetId :: BetId
     , ciSizeReduction :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data CancelInstructionReport = CancelInstructionReportC
     { ciStatus :: InstructionReportStatus
@@ -307,13 +355,13 @@ data CancelInstructionReport = CancelInstructionReportC
     , ciInstruction :: Maybe CancelInstruction
     , ciSizeCancelled :: Double
     , ciCancelledDate :: Maybe UTCTime }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data CancelOrders = CancelOrdersC
     { caMarketId :: Maybe MarketId
     , caInstructions :: Maybe [CancelInstruction]
     , caCustomerRef :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ClearedOrderSummary = ClearedOrderSummaryC
     { coEventTypeId :: EventTypeId
@@ -336,28 +384,28 @@ data ClearedOrderSummary = ClearedOrderSummaryC
     , coSizeSettled :: Maybe Double
     , coProfit :: Double
     , coSizeCancelled :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data Competition = CompetitionC
     { cId :: CompetitionId
     , cName :: Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data CompetitionResult = CompetitionResultC
     { cCompetition :: Competition
     , cMarketCount :: Int
     , cCompetitionRegion :: Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data CountryCodeResult = CountryCodeResultC
     { ccCountryCode :: Text
     , ccMarketCount :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ClearedOrderSummaryReport = ClearedOrderSummaryReportC
     { coClearedOrders :: [ClearedOrderSummary]
     , coMoreAvailable :: Bool }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data CurrentOrderSummary = CurrentOrderSummaryC
     { cBetId :: BetId
@@ -380,12 +428,12 @@ data CurrentOrderSummary = CurrentOrderSummaryC
     , cSizeVoided :: Maybe Double
     , cRegulatorAuthCode :: Maybe Text
     , cRegulatorCode :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data CurrentOrderSummaryReport = CurrentOrderSummaryReportC
     { cCurrentOrders :: [CurrentOrderSummary]
     , cMoreAvailable :: Bool }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ExBestOffersOverrides = ExBestOffersOverridesC
     { ebbestPricesDepth :: Maybe Int
@@ -393,13 +441,13 @@ data ExBestOffersOverrides = ExBestOffersOverridesC
     , ebRollupLimit :: Maybe Int
     , ebRollupLiabilityThreshold :: Maybe Double
     , ebRollupLiabilityFactor :: Maybe Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ExchangePrices = ExchangePricesC
     { epAvailableToBack :: Maybe [PriceSize]
     , epAvailableToLay :: Maybe [PriceSize]
     , epTradedVolume :: Maybe [PriceSize] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data Event = EventC
     { eId :: EventId
@@ -408,31 +456,31 @@ data Event = EventC
     , eTimezone :: Text
     , eVenue :: Maybe Text
     , eOpenDate :: UTCTime }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data EventResult = EventResultC
     { erEvent :: Event
     , erMarketCount :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data EventType = EventTypeC
     { etId :: EventTypeId
     , etName :: Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data EventTypeResult = EventTypeResultC
     { etrEventType :: EventType
     , etrMarketCount :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 newtype Heartbeat = HeartbeatC
         { hPreferredTimeoutSeconds :: Int }
-        deriving ( Eq, Ord, Show, Read, Typeable )
+        deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data HeartbeatReport = HeartbeatReportC
     { hActionPerformed :: ActionPerformed
     , hActualTimeoutSeconds :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ItemDescription = ItemDescriptionC
     { iEventTypeDesc :: Maybe Text
@@ -441,28 +489,28 @@ data ItemDescription = ItemDescriptionC
     , iMarketStartTime :: Maybe UTCTime
     , iRunnerDesc :: Maybe Text
     , iNumberOfWinners :: Maybe Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data LimitOnCloseOrder = LimitOnCloseOrderC
     { loLiability :: Double
     , loPrice :: Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data LimitOrder = LimitOrderC
     { lSize :: Double
     , lPrice :: Double
     , lPersistenceType :: PersistenceType }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListCompetitions = ListCompetitionsC
     { lcFilter :: MarketFilter
     , lcLocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListCountries = ListCountriesC
     { lcsFilter :: MarketFilter
     , lcsLocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListCurrentOrders = ListCurrentOrdersC
     { lcoBetIds :: Maybe (S.Set BetId)
@@ -473,7 +521,7 @@ data ListCurrentOrders = ListCurrentOrdersC
     , lcoSortDir :: Maybe SortDir
     , lcoFromRecord :: Maybe Int
     , lcoRecordCount :: Maybe Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListClearedOrders = ListClearedOrdersC
     { lcrBetStatus :: BetStatus
@@ -489,17 +537,17 @@ data ListClearedOrders = ListClearedOrdersC
     , lcrLocale :: Maybe Text
     , lcrFromRecord :: Maybe Int
     , lcrRecordCount :: Maybe Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListEvents = ListEventsC
     { leFilter :: MarketFilter
     , leLocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListEventTypes = ListEventTypesC
     { letFilter :: MarketFilter
     , letLocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListMarketBook = ListMarketBookC
     { lmbMarketIds :: [MarketId]
@@ -508,7 +556,7 @@ data ListMarketBook = ListMarketBookC
     , lmbMatchProjection :: Maybe MatchProjection
     , lmbCurrencyCode :: Maybe Text
     , lmbLocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListMarketCatalogue = ListMarketCatalogueC
     { lmcFilter :: MarketFilter
@@ -516,29 +564,29 @@ data ListMarketCatalogue = ListMarketCatalogueC
     , lmcSort :: Maybe MarketSort
     , lmcMaxResults :: Int
     , lmcLocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListMarketProfitAndLoss = ListMarketProfitAndLossC
     { lmMarketIds :: S.Set MarketId
     , lmIncludeSettledBets :: Maybe Bool
     , lmIncludeBspBets :: Maybe Bool
     , lmNetOfCommission :: Maybe Bool }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListMarketTypes = ListMarketTypesC
     { lmtFilter :: MarketFilter
     , lmtLocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListTimeRanges = ListTimeRangesC
     { ltFilter :: MarketFilter
     , ltGranularity :: TimeGranularity }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ListVenues = ListVenuesC
     { lvFilter :: MarketFilter
     , lvLocale :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data MarketBook = MarketBookC
     { mbMarketId :: MarketId
@@ -558,7 +606,7 @@ data MarketBook = MarketBookC
     , mbRunnersVoidable :: Maybe Bool
     , mbVersion :: Maybe Int
     , mbRunners :: [Runner] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data MarketCatalogue = MarketCatalogueC
     { mcMarketId :: MarketId
@@ -570,7 +618,7 @@ data MarketCatalogue = MarketCatalogueC
     , mcEventType :: Maybe EventType
     , mcCompetition :: Maybe Competition
     , mcEvent :: Maybe Event }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data MarketDescription = MarketDescriptionC
     { mdPersistenceEnabled :: Bool
@@ -588,7 +636,7 @@ data MarketDescription = MarketDescriptionC
     , mdRules :: Maybe Text
     , mdRulesHasDate :: Maybe Bool
     , mdClarifications :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data MarketFilter = MarketFilterC
     { mfTextQuery :: Maybe String
@@ -605,22 +653,22 @@ data MarketFilter = MarketFilterC
     , mfMarketTypeCodes :: Maybe (S.Set MarketTypeCode)
     , mfMarketStartTime :: Maybe TimeRange
     , mfWithOrders :: Maybe (S.Set OrderStatus) }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 newtype MarketOnCloseOrder = MarketOnCloseOrderC
         { mLiability :: Double }
-        deriving ( Eq, Ord, Show, Read, Typeable )
+        deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data MarketProfitAndLoss = MarketProfitAndLossC
     { mpMarketId :: Maybe MarketId
     , mpCommissionApplied :: Maybe Double
     , mpProfitAndLosses :: Maybe [RunnerProfitAndLoss] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data MarketTypeResult = MarketTypeResultC
     { mtMarketType :: Text
     , mtMarketCount :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data Match = MatchC
     { mBetId :: Maybe BetId
@@ -629,7 +677,7 @@ data Match = MatchC
     , mPrice :: Double
     , mSize :: Double
     , mMatchDate :: Maybe UTCTime }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data Order = OrderC
     { oBetId :: BetId
@@ -647,7 +695,7 @@ data Order = OrderC
     , oSizeLapsed :: Maybe Double
     , oSizeCancelled :: Maybe Double
     , oSizeVoided :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data PlaceExecutionReport = PlaceExecutionReportC
     { peCustomerRef :: Maybe Text
@@ -655,7 +703,7 @@ data PlaceExecutionReport = PlaceExecutionReportC
     , peErrorCode :: Maybe ExecutionReportErrorCode
     , peMarketId :: Maybe MarketId
     , peInstructionReports :: Maybe [PlaceInstructionReport] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data PlaceInstruction = PlaceInstructionC
     { pOrderType :: OrderType
@@ -665,7 +713,7 @@ data PlaceInstruction = PlaceInstructionC
     , pLimitOrder :: Maybe LimitOrder
     , pLimitOnCloseOrder :: Maybe LimitOnCloseOrder
     , pMarketOnCloseOrder :: Maybe MarketOnCloseOrder }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data PlaceInstructionReport = PlaceInstructionReportC
     { piStatus :: InstructionReportStatus
@@ -675,25 +723,27 @@ data PlaceInstructionReport = PlaceInstructionReportC
     , piPlacedDate :: Maybe UTCTime
     , piAveragePriceMatched :: Maybe Double
     , piSizeMatched :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data PlaceOrders = PlaceOrdersC
     { pMarketId :: MarketId
     , pInstructions :: [PlaceInstruction]
     , pCustomerRef :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data PriceProjection = PriceProjectionC
     { ppPriceData :: Maybe (S.Set PriceData)
     , ppExBestOffersOverrides :: Maybe ExBestOffersOverrides
     , ppVirtualize :: Maybe Bool
     , ppRolloverStakes :: Maybe Bool }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data PriceSize = PriceSizeC
     { psPrice :: Double
     , psSize :: Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
+
+instance Binary PriceSize
 
 data ReplaceExecutionReport = ReplaceExecutionReportC
     { reCustomerRef :: Maybe Text
@@ -701,25 +751,25 @@ data ReplaceExecutionReport = ReplaceExecutionReportC
     , reErrorCode :: Maybe ExecutionReportErrorCode
     , reMarketId :: Maybe Text
     , reInstructionReports :: Maybe [ReplaceInstructionReport] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ReplaceInstruction = ReplaceInstructionC
     { rBetId :: BetId
     , rNewPrice :: Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ReplaceInstructionReport = ReplaceInstructionReportC
     { riStatus :: InstructionReportStatus
     , riErrorCode :: Maybe InstructionReportErrorCode
     , riCancelInstructionReport :: Maybe CancelInstructionReport
     , riPlaceInstructionReport :: Maybe PlaceInstructionReport }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data ReplaceOrders = ReplaceOrdersC
     { rMarketId :: MarketId
     , rInstructions :: [ReplaceInstruction]
     , rCustomerRef :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data Runner = RunnerC
     { rSelectionId :: SelectionId
@@ -735,7 +785,7 @@ data Runner = RunnerC
     , rEx :: Maybe ExchangePrices
     , rOrders :: Maybe [Order]
     , rMatches :: Maybe [Match] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data RunnerCatalog = RunnerCatalogC
     { rcSelectionId :: SelectionId
@@ -743,19 +793,19 @@ data RunnerCatalog = RunnerCatalogC
     , rcHandicap :: Double
     , rcSortPriority :: Int
     , rcMetadata :: M.Map Text Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data RunnerId = RunnerIdC
     { riMarketId :: MarketId
     , riSelectionId :: SelectionId
     , riHandicap :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data RunnerProfitAndLoss = RunnerProfitAndLossC
     { rpSelectionId :: Maybe SelectionId
     , rpIfWin :: Maybe Double
     , rpIfLose :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data StartingPrices = StartingPricesC
     { spNearPrice :: Maybe Double
@@ -763,17 +813,17 @@ data StartingPrices = StartingPricesC
     , spBackStakeTaken :: Maybe [PriceSize]
     , spLayLiabilityTaken :: Maybe [PriceSize]
     , spActualSP :: Maybe Double }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data TimeRange = TimeRangeC
     { tFrom :: UTCTime
     , tTo :: UTCTime }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data TimeRangeResult = TimeRangeResultC
     { tTimeRange :: TimeRange
     , tMarketCount :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data UpdateExecutionReport = UpdateExecutionReportC
     { ueCustomerRef :: Maybe Text
@@ -781,33 +831,33 @@ data UpdateExecutionReport = UpdateExecutionReportC
     , ueErrorCode :: Maybe ExecutionReportErrorCode
     , ueMarketId :: Maybe Text
     , ueInstructionReports :: Maybe [UpdateInstructionReport] }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data UpdateInstruction = UpdateInstructionC
     { uBetId :: BetId
     , uNewPersistenceType :: PersistenceType }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data UpdateInstructionReport = UpdateInstructionReportC
     { uiStatus :: InstructionReportStatus
     , uiErrorCode :: Maybe InstructionReportErrorCode
     , uiInstruction :: UpdateInstruction }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data UpdateOrders = UpdateOrdersC
     { uMarketId :: MarketId
     , uInstructions :: [UpdateInstruction]
     , uCustomerRef :: Maybe Text }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data VenueResult = VenueResultC
     { vVenue :: Text
     , vMarketCount :: Int }
-    deriving ( Eq, Ord, Show, Read, Typeable )
+    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data APIException = APIException { exceptionDetails :: Text
                                  , exceptionCode :: APIExceptionCode }
-                    deriving ( Eq, Ord, Show, Read, Typeable )
+                    deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 instance Exception APIException
 
@@ -828,7 +878,7 @@ data APIExceptionCode
     | TimeoutError
     | RequestSizeExceedsLimit
     | AccessDenied
-    deriving ( Eq, Ord, Show, Read, Typeable, Enum )
+    deriving ( Eq, Ord, Show, Read, Typeable, Enum, Data, Generic )
 
 makeLensesWith abbreviatedFields ''CancelExecutionReport
 makeLensesWith abbreviatedFields ''CancelInstruction

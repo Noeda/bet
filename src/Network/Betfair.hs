@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
@@ -80,17 +81,19 @@ import Control.Lens hiding ( (.=) )
 import Control.Monad.Catch
 import Control.Monad.State.Strict
 import Data.Aeson
+import Data.Binary hiding ( get, put, encode, decode )
+import qualified Data.Binary as B
 import Data.ByteString ( ByteString )
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as BL
 import qualified Data.ByteString.Lazy as BL
+import Data.Data
 import Data.IORef
 import Data.Monoid
-import Data.Proxy
 import Data.Text ( Text )
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Data.Typeable
+import GHC.Generics
 import Network.Betfair.Internal
 import Network.Betfair.Types
 import Network.HTTP.Client.OpenSSL
@@ -106,8 +109,22 @@ data Credentials = Credentials {
   , _certificatePrivateKeyFile :: FilePath
   , _certificateCertificateFile :: FilePath
   , _apiKey :: Text }
-  deriving ( Eq, Ord, Show, Read, Typeable )
+  deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 makeClassy ''Credentials
+
+instance Binary Credentials where
+    put (Credentials{..}) = do
+        B.put (T.unpack _username)
+        B.put (T.unpack _password)
+        B.put _certificatePrivateKeyFile
+        B.put _certificateCertificateFile
+        B.put (T.unpack _apiKey)
+    get = Credentials <$>
+        (T.pack <$> B.get) <*>
+        (T.pack <$> B.get) <*>
+        B.get <*>
+        B.get <*>
+        (T.pack <$> B.get)
 
 data Work = Work !Url !JsonRPCQuery !(MVar (Either SomeException BL.ByteString))
             deriving ( Eq, Typeable )
