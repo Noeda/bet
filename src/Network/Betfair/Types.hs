@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -46,14 +47,16 @@
 
 module Network.Betfair.Types where
 
+import Control.Applicative
 import Control.Monad.Catch
 import Control.Lens
 import Data.Aeson
 import Data.Aeson.TH
 import Data.Bet
-import Data.Binary ( Binary )
+import Data.Binary ( Binary, get, put )
 import Data.Data
 import Data.Text ( Text )
+import qualified Data.Text.Encoding as T
 import Data.Time
 import qualified Data.Set as S
 import qualified Data.Map.Lazy as M
@@ -303,21 +306,41 @@ newtype Country = Country { getCountry :: Text }
                   deriving ( Eq, Ord, Show, Read, Typeable
                            , FromJSON, ToJSON, Data, Generic )
 
+instance Binary Country where
+    put (Country txt) = put $ WrappedText txt
+    get = Country . unwrapText <$> get
+
 newtype CompetitionId = CompetitionId { getCompetitionId :: Text }
                         deriving ( Eq, Ord, Show, Read, Typeable
                                  , FromJSON, ToJSON, Data, Generic )
+
+instance Binary CompetitionId where
+    put (CompetitionId txt) = put $ WrappedText txt
+    get = CompetitionId . unwrapText <$> get
 
 newtype EventId = EventId { getEventId :: Text }
                   deriving ( Eq, Ord, Show, Read, Typeable
                            , FromJSON, ToJSON, Data, Generic )
 
+instance Binary EventId where
+    put (EventId txt) = put $ WrappedText txt
+    get = EventId . unwrapText <$> get
+
 newtype EventTypeId = EventTypeId { getEventTypeId :: Text }
                       deriving ( Eq, Ord, Show, Read, Typeable
                                , FromJSON, ToJSON, Data, Generic )
 
+instance Binary EventTypeId where
+    put (EventTypeId txt) = put $ WrappedText txt
+    get = EventTypeId . unwrapText <$> get
+
 newtype MarketId = MarketId { getMarketId :: Text }
                    deriving ( Eq, Ord, Show, Read, Typeable
                             , FromJSON, ToJSON, Data, Generic )
+
+instance Binary MarketId where
+    put (MarketId mid) = put $ T.encodeUtf8 mid
+    get = MarketId . T.decodeUtf8 <$> get
 
 newtype MarketTypeCode = MarketTypeCode { getMarketTypeCode :: Text }
                          deriving ( Eq, Ord, Show, Read, Typeable
@@ -391,6 +414,14 @@ data Competition = CompetitionC
     , cName :: Text }
     deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
+instance Binary Competition where
+    put (CompetitionC{..}) = do
+        put cId
+        put (WrappedText cName)
+    get = CompetitionC <$>
+        get <*>
+        (unwrapText <$> get)
+
 data CompetitionResult = CompetitionResultC
     { cCompetition :: Competition
     , cMarketCount :: Int
@@ -458,6 +489,22 @@ data Event = EventC
     , eOpenDate :: UTCTime }
     deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
+instance Binary Event where
+    put (EventC{..}) = do
+        put eId
+        put (WrappedText eName)
+        put eCountryCode
+        put (WrappedText eTimezone)
+        put (fmap WrappedText eVenue)
+        put (WrappedUTCTime eOpenDate)
+    get = EventC <$>
+        get <*>
+        (unwrapText <$> get) <*>
+        get <*>
+        (unwrapText <$> get) <*>
+        (fmap unwrapText <$> get) <*>
+        (unwrapUTCTime <$> get)
+
 data EventResult = EventResultC
     { erEvent :: Event
     , erMarketCount :: Int }
@@ -468,14 +515,26 @@ data EventType = EventTypeC
     , etName :: Text }
     deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
+instance Binary EventType where
+    put (EventTypeC {..}) = do
+        put etId
+        put (WrappedText etName)
+    get = EventTypeC <$>
+        get <*>
+        (unwrapText <$> get)
+
 data EventTypeResult = EventTypeResultC
     { etrEventType :: EventType
     , etrMarketCount :: Int }
     deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
+instance Binary EventTypeResult
+
 newtype Heartbeat = HeartbeatC
         { hPreferredTimeoutSeconds :: Int }
         deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
+
+instance Binary Heartbeat
 
 data HeartbeatReport = HeartbeatReportC
     { hActionPerformed :: ActionPerformed
@@ -620,6 +679,52 @@ data MarketCatalogue = MarketCatalogueC
     , mcEvent :: Maybe Event }
     deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
+-- | A newtype wrapper `Text`. This exists because we don't want to introduce an
+-- orphan instance `Binary` for `Text`.
+newtype WrappedText = WrappedText { unwrapText :: Text }
+
+instance Binary WrappedText where
+    put (WrappedText txt) = put $ T.encodeUtf8 txt
+    get = WrappedText . T.decodeUtf8 <$> get
+
+-- | A newtype wrapper around `UTCTime`. This exists because we don't want to
+-- introduce an orphan instance `Binary` for `UTCTime`.
+newtype WrappedUTCTime = WrappedUTCTime { unwrapUTCTime :: UTCTime }
+
+instance Binary WrappedUTCTime where
+    put (WrappedUTCTime (UTCTime (ModifiedJulianDay jl) dt)) = do
+        put jl
+        put (toRational dt)
+
+    get = do
+        u <- UTCTime <$>
+            (ModifiedJulianDay <$> get) <*>
+            (fromRational <$> get)
+        return $ WrappedUTCTime u
+
+instance Binary MarketCatalogue where
+    put (MarketCatalogueC{..}) = do
+        put mcMarketId
+        put (T.encodeUtf8 mcMarketName)
+        put (WrappedUTCTime <$> mcMarketStartTime)
+        put mcDescription
+        put mcTotalMatched
+        put mcRunners
+        put mcEventType
+        put mcCompetition
+        put mcEventType
+
+    get = MarketCatalogueC <$>
+        get <*>
+        (T.decodeUtf8 <$> get) <*>
+        (fmap unwrapUTCTime <$> get) <*>
+        get <*>
+        get <*>
+        get <*>
+        get <*>
+        get <*>
+        get
+
 data MarketDescription = MarketDescriptionC
     { mdPersistenceEnabled :: Bool
     , mdBspMarket :: Bool
@@ -637,6 +742,40 @@ data MarketDescription = MarketDescriptionC
     , mdRulesHasDate :: Maybe Bool
     , mdClarifications :: Maybe Text }
     deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
+
+instance Binary MarketDescription where
+    put (MarketDescriptionC{..}) = do
+        put mdPersistenceEnabled
+        put mdBspMarket
+        put (WrappedUTCTime mdMarketTime)
+        put (WrappedUTCTime mdSuspendTime)
+        put (WrappedUTCTime <$> mdSettleTime)
+        put mdBettingType
+        put mdTurnInPlayEnabled
+        put (WrappedText mdMarketType)
+        put (WrappedText mdRegulator)
+        put mdMarketBaseRate
+        put mdDiscountAllowed
+        put (WrappedText <$> mdWallet)
+        put (WrappedText <$> mdRules)
+        put mdRulesHasDate
+        put (WrappedText <$> mdClarifications)
+    get = MarketDescriptionC <$>
+        get <*>
+        get <*>
+        (unwrapUTCTime <$> get) <*>
+        (unwrapUTCTime <$> get) <*>
+        (fmap unwrapUTCTime <$> get) <*>
+        get <*>
+        get <*>
+        (unwrapText <$> get) <*>
+        (unwrapText <$> get) <*>
+        get <*>
+        get <*>
+        (fmap unwrapText <$> get) <*>
+        (fmap unwrapText <$> get) <*>
+        get <*>
+        (fmap unwrapText <$> get)
 
 data MarketFilter = MarketFilterC
     { mfTextQuery :: Maybe String
@@ -794,6 +933,20 @@ data RunnerCatalog = RunnerCatalogC
     , rcSortPriority :: Int
     , rcMetadata :: Maybe (M.Map Text Text) }
     deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
+
+instance Binary RunnerCatalog where
+    put (RunnerCatalogC{..}) = do
+        put rcSelectionId
+        put (WrappedText rcRunnerName)
+        put rcHandicap
+        put rcSortPriority
+        put (M.map WrappedText . M.mapKeysMonotonic WrappedText <$> rcMetadata)
+    get = RunnerCatalogC <$>
+        get <*>
+        (unwrapText <$> get) <*>
+        get <*>
+        get <*>
+        (fmap (M.map unwrapText . M.mapKeysMonotonic unwrapText) <$> get)
 
 data RunnerId = RunnerIdC
     { riMarketId :: MarketId
