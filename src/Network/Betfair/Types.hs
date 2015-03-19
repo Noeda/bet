@@ -792,7 +792,7 @@ data RunnerCatalog = RunnerCatalogC
     , rcRunnerName :: Text
     , rcHandicap :: Double
     , rcSortPriority :: Int
-    , rcMetadata :: M.Map Text Text }
+    , rcMetadata :: Maybe (M.Map Text Text) }
     deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
 data RunnerId = RunnerIdC
