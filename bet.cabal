@@ -64,7 +64,7 @@ library
                       ,pipes                 >=4.1.3   && <5.0
                       ,pipes-http            >=1.0.1   && <2.0
                       ,semigroups            >=0.15.4  && <1.0
-                      ,semigroupoids         >=4.2     && <5.0
+                      ,semigroupoids         >=4.2     && <6.0
                       ,text                  >=1.2     && <2.0
                       ,time                  >=1.4     && <2.0
   ghc-options:         -Wall
