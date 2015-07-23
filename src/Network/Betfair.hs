@@ -83,12 +83,9 @@ import Control.Monad.State.Strict
 import Data.Aeson
 import Data.Binary hiding ( get, put, encode, decode )
 import qualified Data.Binary as B
-import Data.ByteString ( ByteString )
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Builder as BL
 import qualified Data.ByteString.Lazy as BL
 import Data.Data
-import Data.IORef
 import Data.Monoid
 import Data.Text ( Text )
 import qualified Data.Text as T
@@ -96,10 +93,10 @@ import qualified Data.Text.Encoding as T
 import GHC.Generics
 import Network.Betfair.Internal
 import Network.Betfair.Types
+import Network.HTTP.Client hiding ( Proxy, Request )
+import qualified Network.HTTP.Client as PH
 import Network.HTTP.Client.OpenSSL
 import OpenSSL.Session
-import Pipes hiding ( Proxy )
-import Pipes.HTTP as PH hiding ( Proxy )
 import System.Mem.Weak
 
 -- | Login credentials.
@@ -243,6 +240,22 @@ betfairConnection ~credentials@(Credentials{..}) semaphore work_mvar =
                 finally (restore $ workLoop session_key credentials m work_mvar)
                         (killThread keep_alive_tid)
 
+withResponseBody :: PH.Request -> Manager -> (B.ByteString -> IO a) -> IO a
+withResponseBody request m action =
+    withResponse request m $ \body_reader -> do
+        let body = responseBody body_reader
+        bs <- readUpToNBytes 50000000 body
+        action bs
+  where
+    readUpToNBytes bytes body = recursive bytes body mempty
+      where
+        recursive 0 _ result = return result
+        recursive n requestor result = do
+            bs <- body
+            if B.null bs
+              then return result
+              else recursive (n - B.length bs) requestor (result <> bs)
+
 workLoop :: SessionKey -> Credentials -> Manager -> MVar Work -> IO ()
 workLoop session_key credentials m work_mvar = forever $ do
     work <- takeMVar work_mvar
@@ -255,9 +268,8 @@ workLoop session_key credentials m work_mvar = forever $ do
                               -- second or we incur Betfair charges
 
                 request <- betfairRequest session_key credentials sending url
-                withHTTP request m $ \response -> do
-                    body <- readBodyLimited 50000000 response
-                    putMVar result_mvar (Right body)
+                withResponseBody request m $ \body ->
+                    putMVar result_mvar (Right $ BL.fromStrict body)
 
 betfairRequest :: SessionKey
                -> Credentials
@@ -280,12 +292,11 @@ keepAlive session_key (Credentials{..}) m = do
                      [ ("Accept", "application/json")
                      , ("X-Application", T.encodeUtf8 _apiKey)
                      , ("X-Authentication", T.encodeUtf8 session_key) ] }
-    withHTTP req m $ \response -> do
+    withResponseBody req m $ \_ ->
         -- maybe it works, maybe it does not? I'm not sure what would be the
         -- sensible thing to do if keep-alive request fails. User probably
         -- still can continue to use the API as long as the session key is
         -- valid (which it will be for 12 hours).
-        _ <- readBodyLimited 100000 response
         return ()
 
 obtainSessionKey :: Credentials
@@ -298,29 +309,12 @@ obtainSessionKey (Credentials{..}) m = do
                              ,("password", T.encodeUtf8 _password)] $
                 req' { requestHeaders = requestHeaders req' <>
                         [ ("X-Application", T.encodeUtf8 _apiKey) ] }
-    withHTTP req m $ \response -> do
-        b <- readBodyLimited 1000000 response
-        case decode b of
+    withResponseBody req m $ \b ->
+        case decode $ BL.fromStrict b of
             Nothing -> throwM $ ParsingFailure "session key"
             Just login_response -> case login_response of
                 LoginFailed reason -> throwM $ LoginFailure reason
                 LoginSuccessful session_key -> return session_key
-
-readBodyLimited :: Int
-                -> Response (Producer ByteString IO ())
-                -> IO BL.ByteString
-readBodyLimited max_bytes response = do
-    accumRef <- newIORef mempty
-    runEffect $ responseBody response >-> accumulator accumRef 0
-    BL.toLazyByteString <$> readIORef accumRef
-  where
-    accumulator accumRef builder_length = do
-        block <- await
-        accum <- liftIO $ readIORef accumRef
-        when (B.length block + builder_length > max_bytes) $
-            liftIO $ throwM TooMuchHTTPData
-        liftIO $ writeIORef accumRef (accum <> BL.byteString block)
-        accumulator accumRef (builder_length + B.length block)
 
 -- | The type of exceptions that can happen with Betfair.
 data BetfairException
