@@ -134,6 +134,7 @@ data JsonRPCQuery = JsonRPCQuery
 
 -- The type of all JSON-based queries received
 newtype JsonRPC a = JsonRPC (Either APIException a)
+  deriving ( Eq, Show, Typeable )
 
 data BetfairHandle = BetfairHandle
     { _betfairThread :: !ThreadId
@@ -202,16 +203,17 @@ withBetfair (Betfair mvar) action = withMVar mvar $ \case
     Nothing -> throwM BetfairIsClosed
     Just bhandle -> action bhandle
 
-work :: (FromJSON a) => Betfair -> Url -> JsonRPCQuery -> IO a
+work :: forall a. (FromJSON a) => Betfair -> Url -> JsonRPCQuery -> IO a
 work bf url query = withBetfair bf $ \handle -> do
     result <- newEmptyMVar
     putMVar (_workChannel handle) $ Work url query result
     takeMVar result >>= \case
         Left exc -> throwM exc
-        Right result -> case decode result of
-            Nothing -> throwM $ ParsingFailure $ "Betfair behaved in unexpected way. Received raw string: " <> (T.pack $ show result)
-            Just (JsonRPC (Left exc)) -> throwM exc
-            Just (JsonRPC (Right x)) -> return x
+        Right result -> case eitherDecode result of
+            Left err ->
+              throwM $ ParsingFailure $ "Betfair behaved in unexpected way. Error: " <> T.pack err <> " Received raw string: " <> (T.pack $ show result)
+            Right (JsonRPC (Left exc)) -> throwM exc
+            Right (JsonRPC (Right x)) -> return x
 
 betfairConnection :: Credentials
                   -> MVar (Either SomeException ())
