@@ -5,4 +5,8 @@ ssl/
 cabal.sandbox.config
 dist/
 credentials.txt
+*.yaml
+*.hi
+*.o
+.stack-work/
 
