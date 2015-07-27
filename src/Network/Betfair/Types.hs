@@ -930,7 +930,7 @@ data RunnerCatalog = RunnerCatalogC
     { rcSelectionId :: SelectionId
     , rcRunnerName :: Text
     , rcHandicap :: Double
-    , rcSortPriority :: Int
+    , rcSortPriority :: Maybe Int
     , rcMetadata :: Maybe (M.Map Text Text) }
     deriving ( Eq, Ord, Show, Read, Typeable, Data, Generic )
 
