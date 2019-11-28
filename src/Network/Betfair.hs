@@ -289,7 +289,6 @@ betfairRequest session_key (Credentials{..}) query url = do
 
 keepAlive :: SessionKey -> Credentials -> Manager -> IO ()
 keepAlive session_key (Credentials{..}) m = do
---    req' <- parseUrl "https://identitysso.betfair.com/api/keepAlive"
     req' <- parseUrl "https://identitysso-cert.betfair.com/api/keepAlive"
     let req = req' { requestHeaders = requestHeaders req' <>
                      [ ("Accept", "application/json")
