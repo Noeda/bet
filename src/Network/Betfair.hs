@@ -289,7 +289,8 @@ betfairRequest session_key (Credentials{..}) query url = do
 
 keepAlive :: SessionKey -> Credentials -> Manager -> IO ()
 keepAlive session_key (Credentials{..}) m = do
-    req' <- parseUrl "https://identitysso.betfair.com/api/keepAlive"
+--    req' <- parseUrl "https://identitysso.betfair.com/api/keepAlive"
+    req' <- parseUrl "https://identitysso-cert.betfair.com/api/keepAlive"
     let req = req' { requestHeaders = requestHeaders req' <>
                      [ ("Accept", "application/json")
                      , ("X-Application", T.encodeUtf8 _apiKey)
@@ -306,7 +307,7 @@ obtainSessionKey :: Credentials
                  -> IO SessionKey
 obtainSessionKey (Credentials{..}) m = do
     -- request to obtain a session key
-    req' <- parseUrl "https://identitysso.betfair.com/api/certlogin"
+    req' <- parseUrl "https://identitysso-cert.betfair.com/api/certlogin"
     let req = urlEncodedBody [("username", T.encodeUtf8 _username)
                              ,("password", T.encodeUtf8 _password)] $
                 req' { requestHeaders = requestHeaders req' <>
@@ -359,4 +360,3 @@ request req bf = liftIO $
     work bf (requestUrl (Proxy :: Proxy a))
             (JsonRPCQuery { methodName = requestMethod (Proxy :: Proxy a)
                           , params = toJSON req })
-
